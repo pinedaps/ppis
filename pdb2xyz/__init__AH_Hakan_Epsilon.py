@@ -211,7 +211,7 @@ def main():
 
 # Average pKa values from https://doi.org/10.1093/database/baz024
 
-# Temperature dependece of the hydrophobic interactions via ε(T) = ε_c + ΔG_hydrophobic(T), using as template Eq.15 described in H. Wennerstrom & B. Lindman (https://doi.org/10.1016/j.molliq.2025.128169), as follows:
+# Temperature dependece of the hydrophobic interactions via ε(T) using as template Eq.15 described in H. Wennerstrom & B. Lindman (https://doi.org/10.1016/j.molliq.2025.128169), as follows:
 
 # ε(T) = ε_c * (T * (1/Tc + c - c*np.log(T/Tc)) - c*Tc)
 
@@ -219,7 +219,7 @@ def main():
 
 # ε(T) = (ε_c / Tc) * (T - (c / 2) * (T - Tc)**2) 
 
-# The reference value for the minimum depth of the potential, ε_c = 0.8368 at Tc = 293.0 K  was taken from G. Tesei & K. Lindorff-Larsen (https://doi.org/10.12688/openreseurope.14967.2). 
+# The reference value for the minimum depth of the potential, ε_c = 0.8368 kJ/mol at Tc = 293.0 K  was taken from G. Tesei & K. Lindorff-Larsen (https://doi.org/10.12688/openreseurope.14967.2). 
 # For alkanes, c = ΔG/ΔCp ≈ 1.9e-2 K-1 (Eq. 12 in H. Wennerstrom & B. Lindman, https://doi.org/10.1016/j.molliq.2025.128169).
 # For amino acid side chains, c ≈ 2.52e-2 K-1 based on the thermodynamic properties reported in G. I. Makhatadze (https://doi.org/10.1016/S0301-4622(98)00095-7) and V. Pliška, et al. (https://doi.org/10.1016/S0021-9673(00)82337-7).
 

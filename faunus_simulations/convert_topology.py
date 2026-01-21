@@ -91,12 +91,50 @@ def load_duello_topology(filepath):
         return yaml.load(f, Loader=CustomYAMLLoader)
 
 
-def create_faunus_topology_full(duello_topology, structure_file, sphere_radius, salt_concentration):
+def extract_energy_config(duello_topology):
+    """
+    Extract energy configuration from Duello topology.
+    Returns properly formatted AshbaughHatch parameters.
+    """
+    energy_config = duello_topology.get('system', {}).get('energy', {}).get('nonbonded', {}).get('default', [])
+    
+    ashbaugh_config = None
+    for item in energy_config:
+        if isinstance(item, dict):
+            for key, val in item.items():
+                if 'AshbaughHatch' in key or 'ashbaugh' in key.lower():
+                    # Extract mixing and cutoff from the duello config
+                    if isinstance(val, dict):
+                        mixing = val.get('mixing', 'LB')
+                        cutoff = val.get('cutoff', 20)
+                        # Format as LB (Lorentz-Berthelot mixing rule) if arithmetic is specified
+                        if mixing.lower() == 'arithmetic':
+                            mixing = 'LB'
+                        # Ensure cutoff is an integer if it's a whole number
+                        if isinstance(cutoff, float) and cutoff.is_integer():
+                            cutoff = int(cutoff)
+                        ashbaugh_config = f"!AshbaughHatch {{mixing: {mixing}, cutoff: {cutoff}}}"
+    
+    return ashbaugh_config if ashbaugh_config else "!AshbaughHatch {mixing: LB, cutoff: 20}"
+
+
+def create_faunus_topology_full(duello_topology, structure_file, sphere_radius, 
+                                salt_concentration, mol2_offset_z=23.0):
     """
     Create a complete Faunus topology from Duello topology with system configuration.
+    
+    Args:
+        duello_topology: Parsed Duello YAML topology
+        structure_file: Name of the structure file (.xyz)
+        sphere_radius: Radius of the spherical simulation cell
+        salt_concentration: Salt concentration in mol/L
+        mol2_offset_z: Z-offset for second molecule (default: 23.0)
     """
     # Extract temperature from duello file
     temperature = duello_topology.get('T', 298.15)
+    
+    # Extract AshbaughHatch configuration from duello
+    ashbaugh_config = extract_energy_config(duello_topology)
     
     faunus_topology = {
         'atoms': convert_atoms_section(duello_topology.get('atoms', [])),
@@ -130,19 +168,13 @@ def create_faunus_topology_full(duello_topology, structure_file, sphere_radius, 
                 {
                     'molecule': 'MOL2',
                     'N': 1,
-                    'insert': f'!RandomCOM {{ filename: "{structure_file}", rotate: true, directions: none, offset: [0.0, 0.0, 42.0] }}'
+                    'insert': f'!RandomCOM {{ filename: "{structure_file}", rotate: true, directions: none, offset: [0.0, 0.0, {mol2_offset_z}] }}'
                 }
             ],
             'energy': {
                 'nonbonded': {
-                    'default': [
-                        '!ashbaugh-hatch: {mixing: LB, lambda: hydrophobicity}',
-                        '!Coulomb: {cutoff: 1000}'
-                    ]
-                },
-                'spline': {
-                    'cutoff': 15.0,
-                    'n_points': 2000
+                    'default': ashbaugh_config if ashbaugh_config else {},
+                    'coulomb': '!Coulomb {cutoff: 1000}'
                 }
             }
         },
@@ -160,7 +192,7 @@ def create_faunus_topology_full(duello_topology, structure_file, sphere_radius, 
                         'moves': [
                             '!RotateMolecule: {molecule: MOL1, dp: 1.0, weight: 1.0}',
                             '!RotateMolecule: {molecule: MOL2, dp: 1.0, weight: 1.0}',
-                            '!TranslateMolecule: {molecule: MOL2, dp: 1.0, weight: 1.0, directions: [0, 0, 1]}'
+                            '!TranslateMolecule: {molecule: MOL2, dp: 1.0, weight: 1.0, directions: !z}'
                         ]
                     }
                 }
@@ -172,7 +204,7 @@ def create_faunus_topology_full(duello_topology, structure_file, sphere_radius, 
 
 
 def save_faunus_topology(topology, output_filepath):
-    """Save the Faunus topology to a YAML file by hand-writing special sections."""
+    """Save the Faunus topology to a YAML file matching the exact format."""
     output_lines = []
     
     # Write atoms section
@@ -204,7 +236,7 @@ def save_faunus_topology(topology, output_filepath):
     output_lines.append('  cell: ' + topology['system']['cell'])
     output_lines.append('  medium:')
     output_lines.append('    permittivity: ' + topology['system']['medium']['permittivity'])
-    output_lines.append('    temperature: ' + str(topology['system']['medium']['temperature']))
+    output_lines.append('    temperature: ' + str(int(topology['system']['medium']['temperature'])))
     output_lines.append('    salt: ' + topology['system']['medium']['salt'])
     output_lines.append('  blocks:')
     for block in topology['system']['blocks']:
@@ -214,11 +246,13 @@ def save_faunus_topology(topology, output_filepath):
     output_lines.append('  energy:')
     output_lines.append('    nonbonded:')
     output_lines.append('      default:')
-    for item in topology['system']['energy']['nonbonded']['default']:
-        output_lines.append('      - ' + item)
-    output_lines.append('    spline:')
-    output_lines.append('      cutoff: ' + str(topology['system']['energy']['spline']['cutoff']))
-    output_lines.append('      n_points: ' + str(topology['system']['energy']['spline']['n_points']))
+    
+    # Write Coulomb and AshbaughHatch in the correct order
+    coulomb = topology['system']['energy']['nonbonded']['coulomb']
+    ashbaugh = topology['system']['energy']['nonbonded']['default']
+    
+    output_lines.append('      - ' + coulomb)
+    output_lines.append('      - ' + ashbaugh)
     
     # Write analysis section
     output_lines.append('')
@@ -264,9 +298,15 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='''
 Examples:
-  %(prog)s --xyz structure.xyz --radius 125.0 --salt 0.005
-  %(prog)s -x protein.xyz -r 150 -s 0.01 -o my_topology.yaml
+  %(prog)s topology_duello.yaml --xyz structure.xyz --radius 125.0 --salt 0.005
+  %(prog)s topology_duello.yaml -x protein.xyz -r 150 -s 0.01 -z 23.0
         '''
+    )
+    
+    parser.add_argument(
+        'duello',
+        type=str,
+        help='Input Duello topology file'
     )
     
     parser.add_argument(
@@ -291,28 +331,24 @@ Examples:
     )
     
     parser.add_argument(
-        '-o', '--output',
-        type=str,
-        default='topology_faunus_converted.yaml',
-        help='Output YAML filename (default: topology_faunus_converted.yaml)'
-    )
-    
-    parser.add_argument(
-        '-d', '--duello',
-        type=str,
-        default='topology_duello.yaml',
-        help='Input Duello topology file (default: topology_duello.yaml)'
+        '-z', '--offset-z',
+        type=float,
+        default=23.0,
+        help='Z-offset for second molecule (default: 23.0)'
     )
     
     args = parser.parse_args()
     
     # File paths
     duello_file = Path(args.duello)
-    output_file = Path(args.output)
     
     if not duello_file.exists():
         print(f"Error: {duello_file} not found")
         sys.exit(1)
+    
+    # Construct output filename: remove extension and add _faunus.yaml
+    output_file = duello_file.stem + '_faunus.yaml'
+    output_file = Path(output_file)
     
     print(f"Reading Duello topology from: {duello_file}")
     duello_topology = load_duello_topology(duello_file)
@@ -324,12 +360,14 @@ Examples:
     print(f"  Structure file: {args.xyz}")
     print(f"  Sphere radius: {args.radius}")
     print(f"  Salt concentration: {args.salt} mol/L")
+    print(f"  MOL2 Z-offset: {args.offset_z}")
     
     faunus_topology = create_faunus_topology_full(
         duello_topology,
         args.xyz,
         args.radius,
-        args.salt
+        args.salt,
+        args.offset_z
     )
     
     print(f"\nSaving Faunus topology to: {output_file}")

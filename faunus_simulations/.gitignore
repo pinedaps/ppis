@@ -1,2 +1,5 @@
 *.gz
 *.xyz
+*.dat
+*.png
+*.yaml

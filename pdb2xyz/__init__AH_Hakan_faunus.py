@@ -66,7 +66,7 @@ def parse_args():
         type=float,
         required=False,
         help="Salt concentration in mol/L (default: 0.115)",
-        default=None,
+        default=0.115,
     )
     parser.add_argument(
         "--sidechains",

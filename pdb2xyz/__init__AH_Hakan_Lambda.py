@@ -115,6 +115,8 @@ def convert_pdb(pdb_file: str, output_xyz_file: str, use_sidechains: bool, chain
     cys_with_ssbond = ssbonds(traj)
     residues = []
     for index,res in enumerate(traj.topology.residues):
+        #print(res.name,res.index, res.resSeq)
+        #input()
         if not res.is_protein:
             continue
 
@@ -139,14 +141,15 @@ def convert_pdb(pdb_file: str, output_xyz_file: str, use_sidechains: bool, chain
             mw = mw + a.element.mass
 
         # rename CYS -> CSS participating in SS-bonds
+
         if res.name == "CYS" and res.index in cys_with_ssbond:
-            name = "CSS"
-            logging.info(f"Renaming SS-bonded CYS{res.index} to {name}")
+            name = "CSS"+str(res.resSeq)
+            logging.info(f"Renaming SS-bonded CYS{res.resSeq} to {name}")
         else:
-            name = res.name
+            name = str(res.name)+str(res.resSeq)
 
         residues.append(dict(name=name, cm=cm / mw * 10, sasa=SASA[0][index] * 100))
-        if use_sidechains and name != "CSS":
+        if use_sidechains and not name.startswith("CSS"):
             side_chain = add_sidechain(traj, res)
             if side_chain is not None:
                 residues.append(side_chain)
@@ -171,45 +174,7 @@ def convert_pdb(pdb_file: str, output_xyz_file: str, use_sidechains: bool, chain
         logging.info(
             f"Converted {pdb_file} -> {output_xyz_file+'_SASA'} with {len(residues)} residues."
         )
-
-def read_ratio_sasa(filename=None):
-    """
-    If filename is provided:
-        read ratio_sasa file and return {AA: {mean, stdev, stderr}}
-    If filename is None:
-        return default {AA: {mean=1.0, stdev=0.0, stderr=0.0}}
-    """
-    AMINO_ACIDS = ["ALA","ARG","ASN","ASP","CYS", "CSS","GLN","GLU","GLY",
-                   "HIS","ILE","LEU","LYS","MET","PHE","PRO","SER",
-                   "THR","TRP","TYR","VAL"]
-    
-    ratio_sasa = {}
-
-    if filename is None:
-        for aa in AMINO_ACIDS:
-            ratio_sasa[aa] = {
-                "mean": 1.0,
-                "stdev": 0.0,
-                "stderr": 0.0,
-            }
-        return ratio_sasa
-
-    # Otherwise read from file
-    with open(filename) as f:
-        header = f.readline()  # skip header
-        for line in f:
-            if not line.strip():
-                continue
-
-            aa, mean, stdev, stderr = line.split()
-
-            ratio_sasa[aa] = {
-                "mean": float(mean),
-                "stdev": float(stdev),
-                "stderr": float(stderr),
-            }
-
-    return ratio_sasa
+    return residues
 
 def add_sidechain(traj, res):
     """Add sidechain bead for ionizable amino acids"""
@@ -243,17 +208,16 @@ def write_topology(output_path: str, context: dict):
 
 def main():
     logging.basicConfig(level=logging.INFO)
-    args = parse_args()
-    convert_pdb(args.infile, args.outfile, args.sidechains, args.chains)
-    ratio_sasa = read_ratio_sasa(args.sasa_ratio)    
-
+    args     = parse_args()
+    residues = convert_pdb(args.infile, args.outfile, args.sidechains, args.chains)
+    
     context = {
+        "residues": residues,
         "pH": args.pH,
         "alpha": args.alpha,
         "sidechains": args.sidechains,
-	"T": args.T,
-	"ec": args.epsilon,
-        "ratio_sasa": ratio_sasa,
+  	    "T": args.T,
+	    "ec": args.epsilon,
     }
     write_topology(args.top, context)
 
@@ -276,19 +240,60 @@ def main():
 def calvados_template():
     return """
 
-{%- set f = 1.0 - sidechains -%}
-{%- set zCTR = - 10**(pH-3.16) / (1 + 10**(pH-3.16)) -%}
-{%- set zASP = - 10**(pH-3.43) / (1 + 10**(pH-3.43)) -%}
-{%- set zGLU = - 10**(pH-4.14) / (1 + 10**(pH-4.14)) -%}
-{%- set zCYS = 10**(pH-6.25) / (1 + 10**(pH-6.25)) -%}
-{%- set zHIS = 1 - 10**(pH-6.45) / (1 + 10**(pH-6.45)) -%}
-{%- set zNTR = 1 - 10**(pH-7.64) / (1 + 10**(pH-7.64)) -%}
-{%- set zLYS = 1 - 10**(pH-10.68) / (1 + 10**(pH-10.68)) -%}
-{%- set zARG = 1 - 10**(pH-12.5) / (1 + 10**(pH-12.5)) -%}
-
 {%- set Tc = 294.72 -%}
 {%- set c  = 2.52e-2 -%}
 {%- set lT = (1 / Tc) * (T - (c / 2) * (T - Tc)**2) -%} 
+{%- set f = 1.0 - sidechains -%}
+
+{%- macro calc_charge(res_name, pH) -%}
+    {%- if res_name in residues_info -%}
+        {%- set info = residues_info[res_name] -%}
+        {%- if info.type == "acid" -%}
+            {{ - 1 / (1 + 10**(info.pKa - pH)) }}
+        {%- elif info.type == "base" -%}
+            {{ 1 / (1 + 10**(pH - info.pKa)) }}
+        {%- else -%}
+            0.0
+        {%- endif -%}
+    {%- else -%}
+        0.0
+    {%- endif -%}
+{%- endmacro -%}
+
+{%- macro calc_sasa_ratio(res, residues_info) -%}
+    {%- set base_name = res.name[:3] -%}
+    {%- if base_name in residues_info and residues_info[base_name].sasa_mean > 0 -%}
+        {{ res.sasa / residues_info[base_name].sasa_mean }}
+    {%- else -%}
+        0.0
+    {%- endif -%}
+{%- endmacro -%}
+
+{%- set residues_info = {
+    "CTR": {"mass": 0, "sigma": 0, "hydrophobicity": 0,"pKa": 3.16, "type": "acid", "sasa_mean": 0.0},
+    "NTR": {"mass": 0, "sigma": 0, "hydrophobicity": 0,"pKa": 7.64, "type": "base", "sasa_mean": 0.0},
+    "ALA": {"mass": 71.09,  "sigma": 5.12, "hydrophobicity": 0.1897587086430935, "pKa": None, "type": None, "sasa_mean": 70.311},
+    "ARG": {"mass": 156.19, "sigma": 6.56, "hydrophobicity": 0.7407902764839954, "pKa": 12.5, "type": "base", "sasa_mean": 91.373},
+    "ASN": {"mass": 114.1,  "sigma": 5.68, "hydrophobicity": 0.3706962163690402, "pKa": None, "type": None, "sasa_mean": 86.573},
+    "ASP": {"mass": 115.09, "sigma": 5.58, "hydrophobicity": 0.0925875575361580, "pKa": 3.43, "type": "acid", "sasa_mean": 77.661},
+    "CSS": {"mass": 103.14, "sigma": 5.48, "hydrophobicity": 0.5922529084601322, "pKa": None, "type": None, "sasa_mean": 0},
+    "CYS": {"mass": 103.14, "sigma": 5.48, "hydrophobicity": 0.5922529084601322, "pKa": 6.25, "type": "acid", "sasa_mean": 17.558},
+    "GLN": {"mass": 128.13, "sigma": 6.02, "hydrophobicity": 0.3143449791669133, "pKa": None, "type": None, "sasa_mean": 118.064},
+    "GLU": {"mass": 129.11, "sigma": 5.92, "hydrophobicity": 0.0002495905394260, "pKa": 4.14, "type": "acid", "sasa_mean": 118.928},
+    "GLY": {"mass": 57.05,  "sigma": 4.50, "hydrophobicity": 0.7538308115197386, "pKa": None, "type": None, "sasa_mean": 42.462},
+    "HIS": {"mass": 137.14, "sigma": 6.08, "hydrophobicity": 0.4087176216525476, "pKa": 6.45, "type": "base", "sasa_mean": 172.739},
+    "ILE": {"mass": 113.16, "sigma": 6.18, "hydrophobicity": 0.5130398874425708, "pKa": None, "type": None, "sasa_mean": 79.603},
+    "LEU": {"mass": 113.16, "sigma": 6.18, "hydrophobicity": 0.5548615312993875, "pKa": None, "type": None, "sasa_mean": 111.672},
+    "LYS": {"mass": 128.17, "sigma": 6.36, "hydrophobicity": 0.1380602542039267, "pKa": 10.68, "type": "base", "sasa_mean": 162.046},
+    "MET": {"mass": 131.2,  "sigma": 6.18, "hydrophobicity": 0.5170874160398543, "pKa": None, "type": None, "sasa_mean": 124.479},
+    "PHE": {"mass": 147.18, "sigma": 6.36, "hydrophobicity": 0.8906449355499866, "pKa": None, "type": None, "sasa_mean": 116.899},
+    "PRO": {"mass": 97.12,  "sigma": 5.56, "hydrophobicity": 0.3469777523519372, "pKa": None, "type": None, "sasa_mean": 83.630},
+    "SER": {"mass": 87.08,  "sigma": 5.18, "hydrophobicity": 0.4473142572693176, "pKa": None, "type": None, "sasa_mean": 72.653},
+    "THR": {"mass": 101.11, "sigma": 5.62, "hydrophobicity": 0.2672387936544146, "pKa": None, "type": None, "sasa_mean": 77.480},
+    "TYR": {"mass": 163.18, "sigma": 6.46, "hydrophobicity": 0.9506286873011070, "pKa": None, "type": None, "sasa_mean": 138.495},
+    "VAL": {"mass": 99.13,  "sigma": 5.86, "hydrophobicity": 0.2936174211771383, "pKa": None, "type": None, "sasa_mean": 84.858},
+    "TRP": {"mass": 186.22, "sigma": 6.78, "hydrophobicity": 1.0334501235745120, "pKa": None, "type": None, "sasa_mean": 0.0} 
+} -%}
 
 comment: "Calvados 3 coarse grained amino acid model for use with Duello / Faunus"
 
@@ -296,39 +301,21 @@ epsilon_c: {{ ec }}
 pH: {{ pH }}
 T:  {{ T }}
 sidechains: {{ sidechains }}
-version: 0.1.0
+version: 0.2.0
 atoms:
-  - {charge: {{ "%.2f" % zCTR }}, hydrophobicity: !Lambda 0, mass: 0, name: CTR, σ: 2.0, ε: {{ "%.4f" % ec }}}
-  - {charge: {{ "%.2f" % zNTR }}, hydrophobicity: !Lambda 0, mass: 0, name: NTR, σ: 2.0, ε: {{ "%.4f" % ec }}}
-{%- if sidechains %}
-  - {charge: {{ "%.2f" % zGLU }}, hydrophobicity: !Lambda 0, mass: 0, name: Esc, σ: 2.0, ε: {{ "%.4f" % ec }}}
-  - {charge: {{ "%.2f" % zASP }}, hydrophobicity: !Lambda 0, mass: 0, name: Dsc, σ: 2.0, ε: {{ "%.4f" % ec }}}
-  - {charge: {{ "%.2f" % zHIS }}, hydrophobicity: !Lambda 0, mass: 0, name: Hsc, σ: 2.0, ε: {{ "%.4f" % ec }}}
-  - {charge: {{ "%.2f" % zARG }}, hydrophobicity: !Lambda 0, mass: 0, name: Rsc, σ: 2.0, ε: {{ "%.4f" % ec }}}
-  - {charge: {{ "%.2f" % zLYS }}, hydrophobicity: !Lambda 0, mass: 0, name: Ksc, σ: 2.0, ε: {{ "%.4f" % ec }}}
-  - {charge: {{ "%.2f" % zCYS }}, hydrophobicity: !Lambda 0, mass: 0, name: Csc, σ: 2.0, ε: {{ "%.4f" % ec }}}
-{%- endif %}
-  - {charge: {{ "%.2f" % (zARG * f) }}, hydrophobicity: !Lambda {{0.7407902764839954 * lT * ratio_sasa["ARG"].mean }}, mass: 156.19, name: ARG, σ: 6.56, ε: {{ "%.4f" % ec }}, custom: {alpha: {{ f * alpha }}}}
-  - {charge: {{ "%.2f" % (zASP * f) }}, hydrophobicity: !Lambda {{0.092587557536158 * lT * ratio_sasa["ASP"].mean}},  mass: 115.09, name: ASP, σ: 5.58, ε: {{ "%.4f" % ec }}, custom: {alpha: {{ f * alpha }}}}
-  - {charge: {{ "%.2f" % (zGLU * f) }}, hydrophobicity: !Lambda {{0.000249590539426 * lT * ratio_sasa["GLU"].mean}},  mass: 129.11, name: GLU, σ: 5.92, ε: {{ "%.4f" % ec }}, custom: {alpha: {{ f * alpha }}}}
-  - {charge: {{ "%.2f" % (zLYS * f) }}, hydrophobicity: !Lambda {{0.1380602542039267 * lT * ratio_sasa["LYS"].mean}}, mass: 128.17, name: LYS, σ: 6.36, ε: {{ "%.4f" % ec }}, custom: {alpha: {{ f * alpha }}}}
-  - {charge: {{ "%.2f" % (zHIS * f) }}, hydrophobicity: !Lambda {{0.4087176216525476 * lT * ratio_sasa["HIS"].mean}}, mass: 137.14, name: HIS, σ: 6.08, ε: {{ "%.4f" % ec }}, custom: {alpha: {{ f * alpha }}}}
-  - {charge: {{ "%.2f" % (zCYS * f) }}, hydrophobicity: !Lambda {{0.5922529084601322 * lT * ratio_sasa["CYS"].mean}}, mass: 103.14, name: CYS, σ: 5.48, ε: {{ "%.4f" % ec }}, custom: {alpha: {{ f * alpha }}}}
-  - {charge: 0.0, hydrophobicity: !Lambda {{0.3706962163690402 * lT * ratio_sasa["ASN"].mean}}, mass: 114.1,  name: ASN, σ: 5.68, ε: {{ "%.4f" % ec }}}
-  - {charge: 0.0, hydrophobicity: !Lambda {{0.3143449791669133 * lT * ratio_sasa["GLN"].mean}}, mass: 128.13, name: GLN, σ: 6.02, ε: {{ "%.4f" % ec }}}
-  - {charge: 0.0, hydrophobicity: !Lambda {{0.4473142572693176 * lT * ratio_sasa["SER"].mean}}, mass: 87.08,  name: SER, σ: 5.18, ε: {{ "%.4f" % ec }}}
-  - {charge: 0.0, hydrophobicity: !Lambda {{0.7538308115197386 * lT * ratio_sasa["GLY"].mean}}, mass: 57.05,  name: GLY, σ: 4.5,  ε: {{ "%.4f" % ec }}}
-  - {charge: 0.0, hydrophobicity: !Lambda {{0.2672387936544146 * lT * ratio_sasa["THR"].mean}}, mass: 101.11, name: THR, σ: 5.62, ε: {{ "%.4f" % ec }}}
-  - {charge: 0.0, hydrophobicity: !Lambda {{0.1897587086430935 * lT * ratio_sasa["ALA"].mean}}, mass: 71.09,  name: ALA, σ: 5.12, ε: {{ "%.4f" % ec }}}
-  - {charge: 0.0, hydrophobicity: !Lambda {{0.5170874160398543 * lT * ratio_sasa["MET"].mean}}, mass: 131.2,  name: MET, σ: 6.18, ε: {{ "%.4f" % ec }}}
-  - {charge: 0.0, hydrophobicity: !Lambda {{0.950628687301107 * lT * ratio_sasa["TYR"].mean}},  mass: 163.18, name: TYR, σ: 6.46, ε: {{ "%.4f" % ec }}}
-  - {charge: 0.0, hydrophobicity: !Lambda {{0.2936174211771383 * lT * ratio_sasa["VAL"].mean}}, mass: 99.13,  name: VAL, σ: 5.86, ε: {{ "%.4f" % ec }}}
-  - {charge: 0.0, hydrophobicity: !Lambda {{1.033450123574512 * lT * ratio_sasa["TRP"].mean}},  mass: 186.22, name: TRP, σ: 6.78, ε: {{ "%.4f" % ec }}}
-  - {charge: 0.0, hydrophobicity: !Lambda {{0.5548615312993875 * lT * ratio_sasa["LEU"].mean}}, mass: 113.16, name: LEU, σ: 6.18, ε: {{ "%.4f" % ec }}}
-  - {charge: 0.0, hydrophobicity: !Lambda {{0.5130398874425708 * lT * ratio_sasa["ILE"].mean}}, mass: 113.16, name: ILE, σ: 6.18, ε: {{ "%.4f" % ec }}}
-  - {charge: 0.0, hydrophobicity: !Lambda {{0.3469777523519372 * lT * ratio_sasa["PRO"].mean}}, mass: 97.12,  name: PRO, σ: 5.56, ε: {{ "%.4f" % ec }}}
-  - {charge: 0.0, hydrophobicity: !Lambda {{0.8906449355499866 * lT * ratio_sasa["PHE"].mean}}, mass: 147.18, name: PHE, σ: 6.36, ε: {{ "%.4f" % ec }}}
-  - {charge: 0.0, hydrophobicity: !Lambda {{0.5922529084601322 * lT * ratio_sasa["CSS"].mean}}, mass: 103.14, name: CSS, σ: 5.48, ε: {{ "%.4f" % ec }}}
+{% for res in residues %}
+  {%- set base_name = res.name[:3] -%}
+  {%- set z = calc_charge(base_name, pH) | float -%}
+  {%- set sasa_ratio = calc_sasa_ratio(res, residues_info) | float -%}
+  - {name: {{ res.name }},
+   charge: {{ "%.2f" % z }},
+   hydrophobicity: !Lambda {{ residues_info[base_name].hydrophobicity * lT * sasa_ratio }},
+   mass: {{ residues_info[base_name].mass }}, 
+   σ: {{ residues_info[base_name].sigma }},
+   ε: {{ "%.4f" % ec }}{% if residues_info[base_name].type is not none %},
+   custom: { alpha: {{ f * alpha }} }{% endif %} }
+{% endfor %}
+
 system:
   energy:
     nonbonded:
@@ -336,7 +323,6 @@ system:
       default:
         - !AshbaughHatch {mixing: arithmetic, cutoff: 20.0}
 """
-
 
 if __name__ == "__main__":
     main()

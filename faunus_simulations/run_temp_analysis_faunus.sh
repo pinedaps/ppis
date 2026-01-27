@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Walltime HH:MM:SS
-#SBATCH -t 01:00:00
+#SBATCH -t 06:00:00
 
 # Job name and output files
 
@@ -15,7 +15,7 @@
 #SBATCH --ntasks-per-node=48
 
 # NVIDIA A100 GPUs with AMD (Uncomment these line if GPU is needed)
-#SBATCH -p gpua100
+##SBATCH -p gpua100
 
 
 # Job notification (Uncomment these line if needed)

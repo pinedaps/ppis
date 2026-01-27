@@ -1,9 +1,0 @@
-The following modules were not unloaded:
-  (Use "module --force purge" to unload all):
-
-  1) SoftwareTree/Milan
-INFO:root:Adding N-terminal bead
-INFO:root:Adding C-terminal bead
-INFO:root:Converted ../pdbs/1AMM -> 1AMM.xyz with 176 residues.
-INFO:root:Converted ../pdbs/1AMM -> 1AMM.xyz_SASA with 176 residues.
-INFO:root:Topology written to topology_1AMM_T293.yaml

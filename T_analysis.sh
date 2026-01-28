@@ -42,8 +42,8 @@ Other options:
   -h, --help          Show this help message
 
 Example:
-  $0 --pH 7.1 --epsilon 0.8368 --tmin 280 --tmax 320 --tstep 10 --pdb pdbs/XXXX --outdir XXXX --sasa_ratio XXXX
-  $0 --pH 7.1 --epsilon 0.8368 --temps 290,300,310 --pdb pdbs/XXXX --outdir XXXX --sasa_ratio XXXX
+  $0 --pH 7.1 --epsilon 0.8368 --tmin 280 --tmax 320 --tstep 10 --pdb pdbs/XXXX --outdir XXXX
+  $0 --pH 7.1 --epsilon 0.8368 --temps 290,300,310 --pdb pdbs/XXXX --outdir XXXX
 EOF
 }
 
@@ -77,10 +77,6 @@ while [[ $# -gt 0 ]]; do
             ;;
 	--epsilon)
             EC="$2"
-            shift 2
-            ;;
-	--sasa_ratio)
-            SR="$2"
             shift 2
             ;;
         --pdb)
@@ -159,26 +155,13 @@ for T in "${T_ARRAY[@]}"; do
     TOPO_OUT="${TOPO_DIR}/topology_${FILE}_T${T}.yaml"
     echo "  Running topology for pdb = $FILE at T = $T → $TOPO_OUT"
 
-    if [[ -n "$SR" ]]; then
-        echo "SASA ratio file is: $SR"
-        python3 pdb2xyz/__init__AH_Hakan_Lambda.py \
-            -i "$PDB" \
-            -o "$XYZ_OUT" \
-            -t "$TOPO_OUT" \
-            --pH "$PH" \
-            --T "$T"  \
-            --epsilon "$EC" \
-            --sasa_ratio "$SR"
-    else
-        echo "SASA ratio for each amino acid taken as 1"
-        python3 pdb2xyz/__init__AH_Hakan_Lambda.py \
-            -i "$PDB" \
-	    -o "$XYZ_OUT" \
-	    -t "$TOPO_OUT" \
-	    --pH "$PH" \
-            --T "$T"  \
-	    --epsilon "$EC"
-    fi
+    python3 pdb2xyz/__init__AH_Hakan_Lambda.py \
+	-i "$PDB" \
+    	-o "$XYZ_OUT" \
+    	-t "$TOPO_OUT" \
+    	--pH "$PH" \
+    	--T "$T"  \
+    	--epsilon "$EC" \
 done
 
 echo "Topology generation complete."

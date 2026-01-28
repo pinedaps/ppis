@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Walltime HH:MM:SS
-#SBATCH -t 06:00:00
+#SBATCH -t 04:00:00
 
 # Job name and output files
 
@@ -64,7 +64,7 @@ module purge
 
 source ~/duello_env/bin/activate
 
-OUTDIR="1AMM"
+OUTDIR="1AMM_2"
 
 ./T_analysis_faunus.sh --pdb ../pdbs/1AMM --temps 293 --pH 7.1 --sc 0.115 --epsilon 0.8368 --outdir $OUTDIR
 

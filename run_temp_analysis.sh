@@ -66,9 +66,9 @@ module load GCC/12.3.0
 
 source ~/duello_env/bin/activate
 
-#./T_analysis.sh --pH 7.1 --epsilon 0.8368 --temps 293 --pdb pdbs/1AMM --outdir 1AMM_epsilon_0.8368_res_0.28_dr_0.1_SASA --sasa_ratio sasa_rho/SASA_ratio
+#./T_analysis.sh --pH 7.1 --epsilon 0.8368 --temps 293 --pdb pdbs/1AMM --outdir 1AMM_epsilon_0.8368_res_0.28_dr_0.1
 
-./T_analysis.sh --pH 7.1 --epsilon 0.8368 --temps 293 --pdb pdbs/1AMM --outdir 1AMM_epsilon_0.8368_res_0.28_dr_0.1
+./T_analysis.sh --pH 7.1 --epsilon 0.8368 --temps 293 --pdb pdbs/1AMM --outdir 1AMM_epsilon_0.8368_res_0.28_dr_0.1_SASA
 
 #./T_analysis.sh --pH 7.1 --epsilon 0.6281 --temps 290,300,310 --pdb pdbs/1AMM --outdir 1AMM_epsilon_0.6281_res_0.28_dr_0.1
 

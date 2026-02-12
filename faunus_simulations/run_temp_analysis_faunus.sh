@@ -1,5 +1,8 @@
 #!/bin/bash
 
+##SBATCH --begin=now+4hours
+##SBATCH --begin=2026-02-12T04:00:00
+
 # Walltime HH:MM:SS
 #SBATCH -t 04:00:00
 
@@ -64,7 +67,7 @@ module purge
 
 source ~/duello_env/bin/activate
 
-OUTDIR="1AMM_2"
+OUTDIR="1AMM_Hakan_vt"
 
 ./T_analysis_faunus.sh --pdb ../pdbs/1AMM --temps 293 --pH 7.1 --sc 0.115 --epsilon 0.8368 --outdir $OUTDIR
 

@@ -34,7 +34,7 @@ Temperature input options (choose one):
         Provide an explicit list, e.g. --temps 300,310,320
   --pH <value>
         Provide a pH value
-  --sc <value>
+  --saltcon <value>
         Salt concentration in mol/L  
   --epsilon <value>
         Provide the reference epsilon for the LJ potential at 293 K
@@ -44,8 +44,8 @@ Other options:
   -h, --help          Show this help message
 
 Example:
-  $0 --pdb ../pdbs/XXXX --tmin 280 --tmax 320 --tstep 10 -pH 7.1 --sc 0.115 --epsilon 0.8368 --outdir XXXX 
-  $0 --pdb ../pdbs/XXXX --temps 290,300,310 --pH 7.1 --sc 0.115 --epsilon 0.8368 --outdir XXXX
+  $0 --pdb ../pdbs/XXXX --tmin 280 --tmax 320 --tstep 10 -pH 7.1 --saltcon 0.115 --epsilon 0.8368 --outdir XXXX 
+  $0 --pdb ../pdbs/XXXX --temps 290,300,310 --pH 7.1 --saltcon 0.115 --epsilon 0.8368 --outdir XXXX
 EOF
 }
 
@@ -81,7 +81,7 @@ while [[ $# -gt 0 ]]; do
             PH="$2"
             shift 2
             ;;
-	--sc)
+	--saltcon)
             SC="$2"
             shift 2
             ;;
@@ -149,7 +149,7 @@ echo "pdb: $FILE"
 echo "Temperatures: ${T_ARRAY[*]}"
 echo "pH: $PH"
 echo "[Salt]: $SC"
-echo "epsilon_c: $EC"
+echo "epsilon: $EC"
 echo
 
 #######################################
@@ -166,7 +166,7 @@ for T in "${T_ARRAY[@]}"; do
          -t "$TOPO_OUT" \
 	 --T "$T"  \
          --pH "$PH" \
-         --sc "$SC"  \
+         --saltcon "$SC"  \
          --epsilon "$EC" 
 	 
     echo "  Topology generation complete."

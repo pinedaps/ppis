@@ -331,8 +331,7 @@ analysis:
   file: traj_{{ T }}.xyz
   frequency: !Every 100
 - !VirtualTranslate
-  selections: ["molecule MOL1"]
-  molecule: MOL2
+  selection: "molecule MOL1"
   dL: 0.05
   directions: !z
   file: "vt.dat_{{ T }}.gz"

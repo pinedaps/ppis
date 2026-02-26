@@ -304,7 +304,7 @@ molecules:
   from_structure: {{ xyz_path }}
 
 system:
-  cell: !Sphere {radius: 60.0}
+  cell: !Sphere {radius: 120.0}
   medium:
     permittivity: !Water
     temperature: {{ T }}
@@ -312,7 +312,7 @@ system:
   blocks:
   - molecule: MOL1
     N: 1
-    insert: !RandomCOM { filename: {{ xyz_path }}, rotate: true, directions: none, offset: [0.0, 0.0, -40.0] }
+    insert: !RandomCOM { filename: {{ xyz_path }}, rotate: true, directions: none, offset: [0.0, 0.0, 0.0] }
   - molecule: MOL2
     N: 1
     insert: !RandomCOM { filename: {{ xyz_path }}, rotate: true, directions: none, offset: [0.0, 0.0, 40.0] }
@@ -324,39 +324,40 @@ system:
 
 analysis:
 - !MassCenterDistance
-  molecules: [MOL1, MOL2]
+  selections: ["molecule MOL1", "molecule MOL2"]
   file: com_distance_{{ T }}.dat.gz
-  frequency: !Every 100
+  frequency: !Every 5
 - !Trajectory
   file: traj_{{ T }}.xyz
   frequency: !Every 100
 - !VirtualTranslate
+  selections: ["molecule MOL1"]
   molecule: MOL2
-  dL: 0.1
+  dL: 0.05
   directions: !z
   file: "vt.dat_{{ T }}.gz"
   temperature: {{ T }}
-  frequency: !Every 100
+  frequency: !Every 5
 
 
 propagate:
   seed: Hardware
   criterion: Metropolis
-  repeat: 10000000
+  repeat: 500000
   collections:
   - !Stochastic
     moves:
     - !RotateMolecule
       molecule: MOL1
-      dp: 0.28
+      dp: 1
       weight: 1.0
     - !RotateMolecule
       molecule: MOL2
-      dp: 0.28
+      dp: 1
       weight: 1.0
     - !TranslateMolecule
       molecule: MOL2
-      dp: 0.1
+      dp: 10
       weight: 1.0
       directions: !z
 

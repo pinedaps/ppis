@@ -159,7 +159,8 @@ for T in "${T_ARRAY[@]}"; do
     	-t "$TOPO_OUT" \
     	--pH "$PH" \
     	--T "$T"  \
-    	--epsilon "$EC"
+    	--epsilon "$EC" \
+	--sidechains
 done
 
 echo "Topology generation complete."

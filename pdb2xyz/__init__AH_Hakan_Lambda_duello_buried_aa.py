@@ -190,7 +190,7 @@ def add_sidechain(traj, res):
     for atom in res.atoms:
         bead_name = sidechain_map.get((res.name, atom.name))
         if bead_name:
-            return dict(name=bead_name, cm=traj.xyz[0][atom.index] * 10)
+            return dict(name=bead_name, cm=traj.xyz[0][atom.index] * 10, sasa=0)
 
     if res.name in ["ASP", "GLU", "ARG", "LYS", "HIS", "CYS"]:
         logging.warning(f"Missing sidechain bead for {res.name}{res.index}")
@@ -248,13 +248,15 @@ def calvados_template():
 {%- macro calc_charge(res_name, pH) -%}
     {%- if res_name in residues_info -%}
         {%- set info = residues_info[res_name] -%}
-        {%- if info.type == "acid" -%}
-            {{ - 1 / (1 + 10**(info.pKa - pH)) }}
-        {%- elif info.type == "base" -%}
-            {{ 1 / (1 + 10**(pH - info.pKa)) }}
-        {%- else -%}
-            0.0
-        {%- endif -%}
+    {%- elif res_name in sidechains_info -%}
+        {%- set info = sidechains_info[res_name] -%}
+    {%- else -%}
+        {%- set info = none -%}
+    {%- endif -%}
+    {%- if info is not none and info.type == "acid" -%}
+        {{ - 1 / (1 + 10**(info.pKa - pH)) }}
+    {%- elif info is not none and info.type == "base" -%}
+        {{ 1 / (1 + 10**(pH - info.pKa)) }}
     {%- else -%}
         0.0
     {%- endif -%}
@@ -291,7 +293,15 @@ def calvados_template():
     "THR": {"mass": 101.11, "sigma": 5.62, "hydrophobicity": 0.2672387936544146, "pKa": None, "type": None, "sasa_mean": 77.480},
     "TYR": {"mass": 163.18, "sigma": 6.46, "hydrophobicity": 0.9506286873011070, "pKa": None, "type": None, "sasa_mean": 138.495},
     "VAL": {"mass": 99.13,  "sigma": 5.86, "hydrophobicity": 0.2936174211771383, "pKa": None, "type": None, "sasa_mean": 84.858},
-    "TRP": {"mass": 186.22, "sigma": 6.78, "hydrophobicity": 1.0334501235745120, "pKa": None, "type": None, "sasa_mean": 0.0} 
+    "TRP": {"mass": 186.22, "sigma": 6.78, "hydrophobicity": 1.0334501235745120, "pKa": None, "type": None, "sasa_mean": 0.0}
+} -%}
+{%- set sidechains_info = {
+    "Esc": {"mass": 0.0, "sigma": 2.0, "hydrophobicity": 0.0, "pKa": 4.14,  "type": "acid"},
+    "Dsc": {"mass": 0.0, "sigma": 2.0, "hydrophobicity": 0.0, "pKa": 3.43,  "type": "acid"},
+    "Hsc": {"mass": 0.0, "sigma": 2.0, "hydrophobicity": 0.0, "pKa": 6.45,  "type": "base"},
+    "Rsc": {"mass": 0.0, "sigma": 2.0, "hydrophobicity": 0.0, "pKa": 12.5,  "type": "base"},
+    "Ksc": {"mass": 0.0, "sigma": 2.0, "hydrophobicity": 0.0, "pKa": 10.68, "type": "base"},
+    "Csc": {"mass": 0.0, "sigma": 2.0, "hydrophobicity": 0.0, "pKa": 6.25,  "type": "acid"}
 } -%}
 
 comment: "Calvados 3 coarse grained amino acid model for use with Duello / Faunus"
@@ -299,21 +309,37 @@ comment: "Calvados 3 coarse grained amino acid model for use with Duello / Faunu
 epsilon_c: {{ ec }}
 pH: {{ pH }}
 T:  {{ T }}
+f: {{ f }}
 sidechains: {{ sidechains }}
 version: 0.2.0
 atoms:
-{% for res in residues %}
+{%- for res in residues -%}
   {%- set base_name = res.name[:3] -%}
+  {%- if base_name in residues_info -%}
   {%- set z = calc_charge(base_name, pH) | float -%}
-  {%- set buried_aa = sasa_filter(res, 5) | float -%}
+  {%- set buried_aa = sasa_filter(res, 5) | float %}
   - {name: {{ res.name }},
-   charge: {{ "%.2f" % z }},
+   charge: {{ "%.2f" % (z * f) }},
    hydrophobicity: !Lambda {{ residues_info[base_name].hydrophobicity * buried_aa * (lT if base_name in ["ALA","ILE","LEU","MET","PHE","PRO","TRP","VAL"] else 1) }},
    mass: {{ residues_info[base_name].mass }}, 
    σ: {{ residues_info[base_name].sigma }},
    ε: {{ "%.4f" % ec }}{% if residues_info[base_name].type is not none %},
    custom: { alpha: {{ f * alpha }} }{% endif %} }
-{% endfor %}
+   {%- endif -%}
+{%- endfor -%}
+
+{%- if sidechains %}
+  {%- for name, info in sidechains_info.items() %}
+  {%- set z = calc_charge(name, pH) | float %}
+  - {name: {{ name }},
+   charge: {{ "%.2f" % z }},
+   hydrophobicity: !Lambda {{ info.hydrophobicity }},
+   mass: {{ info.mass }},
+   σ: {{ info.sigma }},
+   ε: {{ "%.4f" % ec }} }
+   {%- endfor %}
+{%- endif %}
+
 
 system:
   energy:

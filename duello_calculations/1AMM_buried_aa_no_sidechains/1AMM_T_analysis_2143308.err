@@ -1,0 +1,24 @@
+The following modules were not unloaded:
+  (Use "module --force purge" to unload all):
+
+  1) SoftwareTree/Milan
+INFO:root:Adding N-terminal bead
+INFO:root:Adding C-terminal bead
+INFO:root:Converted pdbs/1AMM -> 1AMM/1AMM with 176 residues.
+INFO:root:Converted pdbs/1AMM -> 1AMM/1AMM_SASA with 176 residues.
+INFO:root:Topology written to 1AMM/topologies/topology_1AMM_T293.yaml
+ INFO  duello::energy > Adding Coulomb potential to nonbonded matrix
+ INFO  duello         > Medium: 𝑇 = 293.00 K, εᵣ = 80.3, λᴮ = 7.1 Å, 𝐼 = 115.0 mM, λᴰ = 9.0 Å, 0.1 M 🧂Salt = NaCl
+ INFO  duello         > Molecular net-charges:    [-5.48e, -5.48e]
+ INFO  duello         > Molecular masses (g/mol): [20947.73e, 20947.73e]
+ INFO  duello         > COM range: [23.0, 80.0) in 0.1 Å steps 🐾
+ INFO  duello::anglescan > Requested 160 points on a sphere; got 162 -> new resolution = 0.28
+ INFO  duello::anglescan > 162 x 162 x 23 = 603612 poses 💃🕺 per distance
+ INFO  duello::report    > Second virial coefficient, 𝐵₂ = 39825.47 Å³
+ INFO  duello::report    >                               = 5.47e-5 mol⋅ml/g²
+ INFO  duello::report    > Reduced second virial coefficient, 𝐵₂ / 𝐵₂hs = 1.56 using σ = 23.00 Å
+ INFO  duello::report    > Plot: [1;33mfree energy[0m and [1;31mmean energy[0m along mass center separation. In units of kT and angstroms.
+Traceback (most recent call last):
+  File "/home/pinedaps/g_crystallin/plot_scripts/plot_potential.py", line 70, in <module>
+    R, F, U, C, exp = np.loadtxt(data_dir+file_pot, unpack=True)
+ValueError: not enough values to unpack (expected 5, got 3)

@@ -4,7 +4,7 @@
 ##SBATCH --begin=2026-02-12T04:00:00
 
 # Walltime HH:MM:SS
-#SBATCH -t 04:00:00
+#SBATCH -t 00:05:00
 
 # Job name and output files
 
@@ -67,11 +67,9 @@ module purge
 
 source ~/duello_env/bin/activate
 
-OUTDIR="1AMM_Hakan_vt"
+OUTDIR="test"
 
-./T_analysis_faunus.sh --pdb ../pdbs/1AMM --temps 293 --pH 7.1 --sc 0.115 --epsilon 0.8368 --outdir $OUTDIR
-
-#./T_analysis.sh --pH 7.1 --epsilon 0.6281 --temps 290,300,310 --pdb pdbs/1AMM --outdir 1AMM_epsilon_0.6281_res_0.28_dr_0.1
+./T_analysis_faunus.sh --pdb ../pdbs/1AMM --temps 293 --pH 7.1 --saltcon 0.115 --epsilon 0.8368 --outdir $OUTDIR
 
 deactivate
 

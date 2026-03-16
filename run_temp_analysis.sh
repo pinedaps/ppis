@@ -63,7 +63,7 @@ module purge
 
 source ~/duello_env/bin/activate
 
-OUTDIR="1AMM_epsilon_0.8368_res_0.28_dr_0.1_SASA"
+OUTDIR="1AMM_sidechains"
 
 #./T_analysis.sh --pH 7.1 --epsilon 0.8368 --temps 293 --pdb pdbs/1AMM --outdir $OUTDIR 
 

@@ -106,12 +106,16 @@ while [[ $# -gt 0 ]]; do
 done
 
 #######################################
-# Default values
+# Default values and build faunus-rs
 #######################################
 
 FILE="${PDB##*/}"
 OUTDIR="${OUTDIR:-$FILE}"
+FILE="${FILE%.*}"
+
 echo "The output directory is $OUTDIR"
+
+cargo build --release --manifest-path "$HOME/projects/faunus-rs/faunus/Cargo.toml"
 
 #######################################
 # Build temperature array
@@ -141,9 +145,11 @@ TOPO_DIR="$OUTDIR/topologies"
 DAT_DIR="$OUTDIR/results/dat"
 YAML_DIR="$OUTDIR/results/yaml"
 TRAJ_DIR="$OUTDIR/results/traj"
+PLOT_DIR="$OUTDIR/plots"
 XYZ_OUT="${FILE}.xyz"
 
-mkdir -p "$TOPO_DIR" "$DAT_DIR" "$YAML_DIR" "$TRAJ_DIR"
+mkdir -p "$TOPO_DIR" "$DAT_DIR" "$YAML_DIR" "$TRAJ_DIR" "$PLOT_DIR"
+mkdir -p "$OUTDIR/plots"
 
 echo "pdb: $FILE"
 echo "Temperatures: ${T_ARRAY[*]}"
@@ -160,7 +166,7 @@ echo
 for T in "${T_ARRAY[@]}"; do
     TOPO_OUT="topology_${FILE}_T${T}.yaml"
     echo "  Running topology for pdb = $FILE at T = $T → $TOPO_OUT"
-    python3 ../pdb2xyz/__init__AH_Hakan_Lambda_faunus.py \
+    python3 $HOME/projects/ppis/pdb2xyz/__init__AH_Hakan_Lambda_faunus_MB.py \
          -i "$PDB" \
          -o "$XYZ_OUT" \
          -t "$TOPO_OUT" \
@@ -176,16 +182,23 @@ for T in "${T_ARRAY[@]}"; do
 #######################################
 
     echo "  Faunus simulation for T = $T " 
-    echo 
-    $HOME/faunus-rs/faunus/target/release/faunus run --input "$TOPO_OUT"
+    echo
+    $HOME/projects/faunus-rs/faunus/target/release/faunus run --input "$TOPO_OUT"
     mv "$TOPO_OUT" "$TOPO_DIR"
     mv "output.yaml" "output_${T}.yaml"
 done
 
-mv "$XYZ_OUT" "${XYZ_OUT}_SASA" $OUTDIR
-mv *.gz       "$DAT_DIR"
-mv *.yaml     "$YAML_DIR"
-mv *.xyz      "$TRAJ_DIR"
+mv *.gz       	"$DAT_DIR"
+mv $XYZ_OUT   	"$TOPO_DIR"
+mv *.yaml     	"$YAML_DIR"
+mv *.xtc	"$TRAJ_DIR"
+
+#######################################
+# Step 3: Plot results
+#######################################
+
+echo "Generating plots..."
+python3 $HOME/projects/ppis/faunus_simulations/plot_scripts/plot_dat.py --dat_dir "$DAT_DIR" --plots_dir "$PLOT_DIR"
 
 echo "Faunus simulations complete."
 echo
@@ -208,5 +221,5 @@ echo "========================================"
 echo "Script started:  $SCRIPT_START_DATE"
 echo "Script ended:    $SCRIPT_END_DATE"
 echo "Total elapsed time: ${HOURS}h ${MINUTES}m ${SECONDS}s (${ELAPSED} seconds)"
-echo "========================================"
+echo "======================================="
 echo

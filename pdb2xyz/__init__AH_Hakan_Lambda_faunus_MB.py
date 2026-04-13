@@ -111,7 +111,6 @@ def ssbonds(traj):
 def convert_pdb(pdb_file: str, output_xyz_file: str, use_sidechains: bool, chains=None):
     """Convert PDB to coarse grained XYZ file; one bead per amino acid"""
     traj = md.load_pdb(pdb_file, frame=0)
-    SASA, map = md.shrake_rupley(traj, probe_radius=0.15, n_sphere_points=960, mode='residue', get_mapping=True) 
     cys_with_ssbond = ssbonds(traj)
     residues = []
     for index,res in enumerate(traj.topology.residues):
@@ -126,12 +125,12 @@ def convert_pdb(pdb_file: str, output_xyz_file: str, use_sidechains: bool, chain
         for a in res.atoms:
             # Add N-terminal
             if res.index == 0 and a.index == 0 and a.name == "N":
-                residues.append(dict(name="NTR", cm=traj.xyz[0][a.index] * 10, sasa=0))
+                residues.append(dict(name="NTR", cm=traj.xyz[0][a.index] * 10))
                 logging.info("Adding N-terminal bead")
 
             # Add C-terminal
             if a.name == "OXT":
-                residues.append(dict(name="CTR", cm=traj.xyz[0][a.index] * 10, sasa=0))
+                residues.append(dict(name="CTR", cm=traj.xyz[0][a.index] * 10))
                 logging.info("Adding C-terminal bead")
 
             # Add coarse grained bead
@@ -145,7 +144,7 @@ def convert_pdb(pdb_file: str, output_xyz_file: str, use_sidechains: bool, chain
         else:
             name = res.name
 
-        residues.append(dict(name=name, cm=cm / mw * 10, sasa=SASA[0][index] * 100))
+        residues.append(dict(name=name, cm=cm / mw * 10))
         if use_sidechains and name != "CSS":
             side_chain = add_sidechain(traj, res)
             if side_chain is not None:
@@ -160,16 +159,6 @@ def convert_pdb(pdb_file: str, output_xyz_file: str, use_sidechains: bool, chain
             f.write(f"{i['name']} {i['cm'][0]:.3f} {i['cm'][1]:.3f} {i['cm'][2]:.3f}\n")
         logging.info(
             f"Converted {pdb_file} -> {output_xyz_file} with {len(residues)} residues."
-        )
-
-    with open(output_xyz_file+'_SASA', "w") as f:
-        f.write(
-            f"Computed using the Shrake and Rupley algorithm implemented in mdtraj using Duello pdb2xyz.py with {pdb_file} (https://github.com/mlund/pdb2xyz)\n"
-        )
-        for i in residues:
-            f.write(f"{i['name']} {i['sasa']:.3f}\n")
-        logging.info(
-            f"Converted {pdb_file} -> {output_xyz_file+'_SASA'} with {len(residues)} residues."
         )
 
 def add_sidechain(traj, res):
@@ -298,51 +287,46 @@ molecules:
   degrees_of_freedom: Rigid
   has_com: true
   from_structure: {{ xyz_path }}
-- name: MOL2
-  degrees_of_freedom: Rigid
-  has_com: true
-  from_structure: {{ xyz_path }}
 
 system:
-  cell: !Sphere {radius: 120.0}
+  cell: !Cuboid [230.0, 230.0, 230.0]
   medium:
     permittivity: !Water
     temperature: {{ T }}
     salt: [!NaCl, {{ saltcon }}]
   blocks:
   - molecule: MOL1
-    N: 1
+    N: 50
     insert: !RandomCOM { filename: {{ xyz_path }}, rotate: true, directions: none, offset: [0.0, 0.0, 0.0] }
-  - molecule: MOL2
-    N: 1
-    insert: !RandomCOM { filename: {{ xyz_path }}, rotate: true, directions: none, offset: [0.0, 0.0, 40.0] }
   energy:
     nonbonded:
       default:
-        - !Coulomb {cutoff: 1000.0}
+        - !Coulomb {cutoff: 20.0}
         - !AshbaughHatch {mixing: arithmetic, cutoff: 20.0}
 
 analysis:
-- !MassCenterDistance
-  selections: ["molecule MOL1", "molecule MOL2"]
-  file: com_distance_{{ T }}.dat.gz
-  frequency: !Every 5
-- !Trajectory
-  file: traj_{{ T }}.xyz
+- !Energy
+  file: energy.csv.gz
   frequency: !Every 100
-- !VirtualTranslate
-  selection: "molecule MOL1"
-  dL: 0.05
-  directions: !z
-  file: "vt.dat_{{ T }}.gz"
-  temperature: {{ T }}
-  frequency: !Every 5
-
+- !Energy
+  file: hydrophobic_energy.csv.gz  
+  frequency: !Every 100
+  selections: ["hydrophobic and molecule MOL1", "hydrophobic and molecule MOL1"]
+- !RadialDistribution
+  selections: ["molecule MOL1", "molecule MOL1"]
+  use_com: true
+  file: rdf_com.dat.gz
+  dr: 0.5
+  frequency: !Every 100
+- !Trajectory
+  file: traj.xtc
+  frequency: !Every 100
+  selections: ["molecule MOL1"]
 
 propagate:
   seed: Hardware
   criterion: Metropolis
-  repeat: 500000
+  repeat: 100
   collections:
   - !Stochastic
     moves:
@@ -350,15 +334,12 @@ propagate:
       molecule: MOL1
       dp: 1
       weight: 1.0
-    - !RotateMolecule
-      molecule: MOL2
-      dp: 1
-      weight: 1.0
+      repeat: 50 
     - !TranslateMolecule
-      molecule: MOL2
-      dp: 10
+      molecule: MOL1
+      dp: 100
       weight: 1.0
-      directions: !z
+      repeat: 50
 
 """
 

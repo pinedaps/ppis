@@ -62,6 +62,13 @@ def parse_args():
         default=0.8368,
     )
     parser.add_argument(
+        "--constant_T_dependence",
+        type=float,
+        required=False,
+        help="Constant for the T dependence equation (default: 0.0252)",
+        default=0.0252,
+    )
+    parser.add_argument(
         "--sidechains",
         action="store_true",
         help="Off-center ionizable sidechains (default: disabled)",
@@ -192,8 +199,9 @@ def main():
         "pH": args.pH,
         "alpha": args.alpha,
         "sidechains": args.sidechains,
-	"T": args.T,
-	"ec": args.epsilon,
+	    "T": args.T,
+	    "ec": args.epsilon,
+        "c":args.constant_T_dependence,
     }
     write_topology(args.top, context)
 
@@ -226,8 +234,7 @@ def calvados_template():
 {%- set zLYS = 1 - 10**(pH-10.68) / (1 + 10**(pH-10.68)) -%}
 {%- set zARG = 1 - 10**(pH-12.5) / (1 + 10**(pH-12.5)) -%}
 
-{%- set Tc = 293 -%}
-{%- set c  = 2.52e-2 -%}
+{%- set Tc = 267 -%}
 {%- set eT = (ec / Tc) * (T - (c / 2) * (T - Tc)**2) -%} 
 {%- set eT = 0.1*ec if eT < 0 else eT -%}
 
@@ -236,6 +243,7 @@ comment: "Calvados 3 coarse grained amino acid model for use with Duello / Faunu
 epsilon_c: {{ ec  }}
 pH: {{ pH }}
 T:  {{ T }}
+c_T: {{ c }}
 sidechains: {{ sidechains }}
 version: 0.1.0
 atoms:

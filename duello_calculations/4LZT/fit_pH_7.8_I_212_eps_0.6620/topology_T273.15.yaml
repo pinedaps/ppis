@@ -1,0 +1,125 @@
+# cgkitten v0.1.0 | cgkitten --temperature 273.15 --ionic-strength 212 --cg multi 4LZT.cif convert --ph 7.8 --scale-hydrophobic lambda:0.2287
+# model: multi
+atoms:
+  - {charge: 0.0000, mass: 128.17, name: LYS, σ: 6.36, ε: 0.6620, hydrophobicity: !Lambda 0.1380602542039267}
+  - {charge: 0.0000, mass: 99.13, name: VAL, σ: 5.86, ε: 0.6620, hydrophobicity: !Lambda 0.2936174211771383}
+  - {charge: 0.0000, mass: 147.18, name: PHE, σ: 6.36, ε: 0.6620, hydrophobicity: !Lambda 0.8906449355499866}
+  - {charge: 0.0000, mass: 57.05, name: GLY, σ: 4.5, ε: 0.6620, hydrophobicity: !Lambda 0.7538308115197386}
+  - {charge: 0.0000, mass: 156.19, name: ARG, σ: 6.56, ε: 0.6620, hydrophobicity: !Lambda 0.7407902764839954}
+  - {charge: 0.0000, mass: 103.14, name: CYS, σ: 5.48, ε: 0.6620, hydrophobicity: !Lambda 0.5922529084601322}
+  - {charge: 0.0000, mass: 129.11, name: GLU, σ: 5.92, ε: 0.6620, hydrophobicity: !Lambda 0.000249590539426}
+  - {charge: 0.0000, mass: 113.16, name: LEU, σ: 6.18, ε: 0.6620, hydrophobicity: !Lambda 0.5548615312993875}
+  - {charge: 0.0000, mass: 71.07, name: ALA, σ: 5.04, ε: 0.6620, hydrophobicity: !Lambda 0.3377244362031627}
+  - {charge: 0.0000, mass: 131.20, name: MET, σ: 6.18, ε: 0.6620, hydrophobicity: !Lambda 0.5170874160398543}
+  - {charge: 0.0000, mass: 137.14, name: HIS, σ: 6.08, ε: 0.6620, hydrophobicity: !Lambda 0.4087176216525476}
+  - {charge: 0.0000, mass: 115.09, name: ASP, σ: 5.58, ε: 0.6620, hydrophobicity: !Lambda 0.092587557536158}
+  - {charge: 0.0000, mass: 114.10, name: ASN, σ: 5.68, ε: 0.6620, hydrophobicity: !Lambda 0.3706962163690402}
+  - {charge: 0.0000, mass: 163.18, name: TYR, σ: 6.46, ε: 0.6620, hydrophobicity: !Lambda 0.950628687301107}
+  - {charge: 0.0000, mass: 87.08, name: SER, σ: 5.18, ε: 0.6620, hydrophobicity: !Lambda 0.4473142572693176}
+  - {charge: 0.0000, mass: 186.22, name: TRP, σ: 6.78, ε: 0.6620, hydrophobicity: !Lambda 1.033450123574512}
+  - {charge: 0.0000, mass: 101.11, name: THR, σ: 5.62, ε: 0.6620, hydrophobicity: !Lambda 0.2672387936544146}
+  - {charge: 0.0000, mass: 128.13, name: GLN, σ: 6.02, ε: 0.6620, hydrophobicity: !Lambda 0.3143449791669133}
+  - {charge: 0.0000, mass: 113.16, name: ILE, σ: 6.18, ε: 0.6620, hydrophobicity: !Lambda 0.5130398874425708}
+  - {charge: 0.0000, mass: 97.12, name: PRO, σ: 5.56, ε: 0.6620, hydrophobicity: !Lambda 0.3469777523519372}
+  - {charge: 0.0162, mass: 0.00, name: N1, σ: 2, ε: 0.6620, hydrophobicity: !Lambda 0} # virtual titratable site
+  - {charge: 0.6080, mass: 0.00, name: N2, σ: 2, ε: 0.6620, hydrophobicity: !Lambda 0} # virtual titratable site
+  - {charge: 0.9993, mass: 0.00, name: N3, σ: 2, ε: 0.6620, hydrophobicity: !Lambda 0} # virtual titratable site
+  - {charge: -0.9999, mass: 0.00, name: O1, σ: 2, ε: 0.6620, hydrophobicity: !Lambda 0} # virtual titratable site
+  - {charge: -0.0053, mass: 0.00, name: O2, σ: 2, ε: 0.6620, hydrophobicity: !Lambda 0} # virtual titratable site
+
+system:
+  energy:
+    nonbonded:
+      # A Coulomb term is automatically added
+      default:
+        - !AshbaughHatch {mixing: arithmetic, cutoff: 20.0}
+      [VAL, VAL]:
+        - !AshbaughHatch {σ: 5.8600, ε: 0.6620, λ: 0.0672, cutoff: 20.0}
+      [VAL, PHE]:
+        - !AshbaughHatch {σ: 6.1100, ε: 0.6620, λ: 0.1354, cutoff: 20.0}
+      [VAL, LEU]:
+        - !AshbaughHatch {σ: 6.0200, ε: 0.6620, λ: 0.0970, cutoff: 20.0}
+      [VAL, ALA]:
+        - !AshbaughHatch {σ: 5.4500, ε: 0.6620, λ: 0.0722, cutoff: 20.0}
+      [VAL, MET]:
+        - !AshbaughHatch {σ: 6.0200, ε: 0.6620, λ: 0.0927, cutoff: 20.0}
+      [VAL, TYR]:
+        - !AshbaughHatch {σ: 6.1600, ε: 0.6620, λ: 0.1423, cutoff: 20.0}
+      [VAL, TRP]:
+        - !AshbaughHatch {σ: 6.3200, ε: 0.6620, λ: 0.1518, cutoff: 20.0}
+      [VAL, ILE]:
+        - !AshbaughHatch {σ: 6.0200, ε: 0.6620, λ: 0.0922, cutoff: 20.0}
+      [VAL, PRO]:
+        - !AshbaughHatch {σ: 5.7100, ε: 0.6620, λ: 0.0733, cutoff: 20.0}
+      [PHE, PHE]:
+        - !AshbaughHatch {σ: 6.3600, ε: 0.6620, λ: 0.2037, cutoff: 20.0}
+      [PHE, LEU]:
+        - !AshbaughHatch {σ: 6.2700, ε: 0.6620, λ: 0.1653, cutoff: 20.0}
+      [PHE, ALA]:
+        - !AshbaughHatch {σ: 5.7000, ε: 0.6620, λ: 0.1405, cutoff: 20.0}
+      [PHE, MET]:
+        - !AshbaughHatch {σ: 6.2700, ε: 0.6620, λ: 0.1610, cutoff: 20.0}
+      [PHE, TYR]:
+        - !AshbaughHatch {σ: 6.4100, ε: 0.6620, λ: 0.2105, cutoff: 20.0}
+      [PHE, TRP]:
+        - !AshbaughHatch {σ: 6.5700, ε: 0.6620, λ: 0.2200, cutoff: 20.0}
+      [PHE, ILE]:
+        - !AshbaughHatch {σ: 6.2700, ε: 0.6620, λ: 0.1605, cutoff: 20.0}
+      [PHE, PRO]:
+        - !AshbaughHatch {σ: 5.9600, ε: 0.6620, λ: 0.1415, cutoff: 20.0}
+      [LEU, LEU]:
+        - !AshbaughHatch {σ: 6.1800, ε: 0.6620, λ: 0.1269, cutoff: 20.0}
+      [LEU, ALA]:
+        - !AshbaughHatch {σ: 5.6100, ε: 0.6620, λ: 0.1021, cutoff: 20.0}
+      [LEU, MET]:
+        - !AshbaughHatch {σ: 6.1800, ε: 0.6620, λ: 0.1226, cutoff: 20.0}
+      [LEU, TYR]:
+        - !AshbaughHatch {σ: 6.3200, ε: 0.6620, λ: 0.1722, cutoff: 20.0}
+      [LEU, TRP]:
+        - !AshbaughHatch {σ: 6.4800, ε: 0.6620, λ: 0.1816, cutoff: 20.0}
+      [LEU, ILE]:
+        - !AshbaughHatch {σ: 6.1800, ε: 0.6620, λ: 0.1221, cutoff: 20.0}
+      [LEU, PRO]:
+        - !AshbaughHatch {σ: 5.8700, ε: 0.6620, λ: 0.1031, cutoff: 20.0}
+      [ALA, ALA]:
+        - !AshbaughHatch {σ: 5.0400, ε: 0.6620, λ: 0.0772, cutoff: 20.0}
+      [ALA, MET]:
+        - !AshbaughHatch {σ: 5.6100, ε: 0.6620, λ: 0.0977, cutoff: 20.0}
+      [ALA, TYR]:
+        - !AshbaughHatch {σ: 5.7500, ε: 0.6620, λ: 0.1473, cutoff: 20.0}
+      [ALA, TRP]:
+        - !AshbaughHatch {σ: 5.9100, ε: 0.6620, λ: 0.1568, cutoff: 20.0}
+      [ALA, ILE]:
+        - !AshbaughHatch {σ: 5.6100, ε: 0.6620, λ: 0.0973, cutoff: 20.0}
+      [ALA, PRO]:
+        - !AshbaughHatch {σ: 5.3000, ε: 0.6620, λ: 0.0783, cutoff: 20.0}
+      [MET, MET]:
+        - !AshbaughHatch {σ: 6.1800, ε: 0.6620, λ: 0.1183, cutoff: 20.0}
+      [MET, TYR]:
+        - !AshbaughHatch {σ: 6.3200, ε: 0.6620, λ: 0.1678, cutoff: 20.0}
+      [MET, TRP]:
+        - !AshbaughHatch {σ: 6.4800, ε: 0.6620, λ: 0.1773, cutoff: 20.0}
+      [MET, ILE]:
+        - !AshbaughHatch {σ: 6.1800, ε: 0.6620, λ: 0.1178, cutoff: 20.0}
+      [MET, PRO]:
+        - !AshbaughHatch {σ: 5.8700, ε: 0.6620, λ: 0.0988, cutoff: 20.0}
+      [TYR, TYR]:
+        - !AshbaughHatch {σ: 6.4600, ε: 0.6620, λ: 0.2174, cutoff: 20.0}
+      [TYR, TRP]:
+        - !AshbaughHatch {σ: 6.6200, ε: 0.6620, λ: 0.2269, cutoff: 20.0}
+      [TYR, ILE]:
+        - !AshbaughHatch {σ: 6.3200, ε: 0.6620, λ: 0.1674, cutoff: 20.0}
+      [TYR, PRO]:
+        - !AshbaughHatch {σ: 6.0100, ε: 0.6620, λ: 0.1484, cutoff: 20.0}
+      [TRP, TRP]:
+        - !AshbaughHatch {σ: 6.7800, ε: 0.6620, λ: 0.2364, cutoff: 20.0}
+      [TRP, ILE]:
+        - !AshbaughHatch {σ: 6.4800, ε: 0.6620, λ: 0.1768, cutoff: 20.0}
+      [TRP, PRO]:
+        - !AshbaughHatch {σ: 6.1700, ε: 0.6620, λ: 0.1579, cutoff: 20.0}
+      [ILE, ILE]:
+        - !AshbaughHatch {σ: 6.1800, ε: 0.6620, λ: 0.1173, cutoff: 20.0}
+      [ILE, PRO]:
+        - !AshbaughHatch {σ: 5.8700, ε: 0.6620, λ: 0.0983, cutoff: 20.0}
+      [PRO, PRO]:
+        - !AshbaughHatch {σ: 5.5600, ε: 0.6620, λ: 0.0794, cutoff: 20.0}

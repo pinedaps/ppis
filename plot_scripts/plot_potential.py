@@ -12,7 +12,7 @@ import common as cmn
 
 cmn
 
-EXPORT_DPI = 100
+EXPORT_DPI = 300
 
 
 def parse_args():
@@ -104,8 +104,24 @@ def load_experimental_data(exp_path):
     if not os.path.isfile(exp_file):
         print(f"Experimental data file {exp_file} not found; skipping experimental curve.")
         return None
+    
+    # Read first line to get label
+    label = None
+    with open(exp_file, 'r') as f:
+        first_line = f.readline()
+        if first_line.startswith('#'):
+            label = first_line.lstrip('#').strip()
+    
+    if label is None:
+        label = "Experimental data"
+    
     print(f"Loading experimental data from {exp_file}")
-    return np.loadtxt(exp_file, unpack=True)
+    data = np.loadtxt(exp_file, unpack=True)
+    
+    return {
+        'label': label,
+        'data': data
+    }
 
 
 def plot_potentials(potential_series, plot_dir):
@@ -135,7 +151,8 @@ def plot_potentials(potential_series, plot_dir):
 def plot_b2(b2_series, exp_data, plot_dir):
     fig, ax = plt.subplots()
     if exp_data is not None:
-        T_exp, b2_red_exp, b2_min, b2_max = exp_data
+        label = exp_data['label']
+        T_exp, b2_red_exp, b2_min, b2_max = exp_data['data']
         yerr = np.vstack([b2_min, b2_max])
         ax.errorbar(
             T_exp,
@@ -146,7 +163,7 @@ def plot_b2(b2_series, exp_data, plot_dir):
             lw=1,
             capsize=3,
             alpha=0.5,
-            label="Bucciarelli $\\it{et\\ al.}$ 2016",
+            label=label,
         )
     for series in b2_series:
         ax.plot(

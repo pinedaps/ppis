@@ -278,7 +278,7 @@ def calvados_template():
 {%- set residues_info = {
     "CTR": {"mass": 0, "sigma": 0, "hydrophobicity": 0,"pKa": 3.16, "type": "acid", "sasa_mean": 0.0},
     "NTR": {"mass": 0, "sigma": 0, "hydrophobicity": 0,"pKa": 7.64, "type": "base", "sasa_mean": 0.0},
-    "ALA": {"mass": 71.09,  "sigma": 5.12, "hydrophobicity": 0.1897587086430935, "pKa": None, "type": None, "sasa_mean": 70.311},
+    "ALA": {"mass": 71.09,  "sigma": 5.12, "hydrophobicity": 0.3377244362031627, "pKa": None, "type": None, "sasa_mean": 70.311},
     "ARG": {"mass": 156.19, "sigma": 6.56, "hydrophobicity": 0.7407902764839954, "pKa": 12.5, "type": "base", "sasa_mean": 91.373},
     "ASN": {"mass": 114.1,  "sigma": 5.68, "hydrophobicity": 0.3706962163690402, "pKa": None, "type": None, "sasa_mean": 86.573},
     "ASP": {"mass": 115.09, "sigma": 5.58, "hydrophobicity": 0.0925875575361580, "pKa": 3.43, "type": "acid", "sasa_mean": 77.661},

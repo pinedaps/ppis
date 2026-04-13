@@ -38,6 +38,8 @@ Temperature input options (choose one):
         Provide the reference epsilon for the LJ potential at 293 K
   --ionic_strength <value>
         Provide the ionic strength at the provided pH in M
+  --constant_T_dependence <value>
+	Provide the constant to be used in the Lambda(T) equation
   --prot_radius <value>
         Provide the radius of the protein to calculate B2_HS in Å
 
@@ -46,8 +48,8 @@ Other options:
   -h, --help          Show this help message
 
 Example:
-  $0 --pdb pdbs/XXXX --tmin 280 --tmax 320 --tstep 10 --pH 7.1 --epsilon 0.8368 --ionic_strength 0.1 --prot_radius --outdir XXXX
-  $0 --pdb pdbs/XXXX --temps 290,300,310 --pH 7.1 --epsilon 0.8368 --ionic_strength 0.1 --prot_radius --outdir XXXX
+  $0 --pdb pdbs/XXXX --tmin 280 --tmax 320 --tstep 10 --pH 7.1 --epsilon 0.8368 --ionic_strength 0.1 --constant_T_dependence 0.0252 --prot_radius 17 --outdir XXXX
+  $0 --pdb pdbs/XXXX --temps 290,300,310 --pH 7.1 --epsilon 0.8368 --ionic_strength 0.1 --constant_T_dependence 0.0252 --prot_radius 17 --outdir XXXX
 EOF
 }
 
@@ -85,6 +87,10 @@ while [[ $# -gt 0 ]]; do
             ;;
 	--ionic_strength)
             IS="$2"
+            shift 2
+            ;;
+	--constant_T_dependence)
+            CT="$2"
             shift 2
             ;;
 	--prot_radius)
@@ -175,6 +181,7 @@ for T in "${T_ARRAY[@]}"; do
     	--pH "$PH" \
     	--T "$T"  \
     	--epsilon "$EC" \
+	--constant_T_dependence "$CT" \
 	--sidechains
 done
 
@@ -203,8 +210,8 @@ for T in "${T_ARRAY[@]}"; do
 		 --molarity "$IS"  \
 		 --temperature "$T" \
 		 --pmf "$SCAN_OUT" \
-		 --backend gpu  \
-                 --grid "type=invr2,size=200,shift=false,energy_cap=50"
+		 --backend reference  #\
+                 #--grid "type=invr2,size=200,shift=false,energy_cap=50"
 done
 
 echo "Duello scans complete."

@@ -77,6 +77,56 @@ def parse_measurement_file(path: Path) -> Measurement:
     )
 
 
+def parse_td_file(path: Path) -> List[Measurement]:
+    """Parse a folder-specific TD.mxt file into a list of Measurement instances."""
+    text = path.read_text(encoding="utf-8", errors="replace")
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    header_index = None
+    header_columns: list[str] = []
+    for index, line in enumerate(lines):
+        if line.upper().startswith("X\tY\tDSEC"):
+            header_index = index
+            header_columns = [column.strip().upper() for column in line.split("\t")]
+            break
+
+    if header_index is None:
+        raise ValueError(f"No valid data header found in {path}")
+
+    measurements: List[Measurement] = []
+    for line in lines[header_index + 1 :]:
+        values = [value.strip() for value in line.split("\t")]
+        if len(values) < len(header_columns):
+            continue
+
+        row = dict(zip(header_columns, values))
+        try:
+            dsec = float(row["DSEC"])
+            temperature_c = float(row["TEMP"])
+            total_volume = float(row["VOL"])
+            concentration = float(row["CONC"])
+            ph = float(row["PH"])
+            timestamp = datetime.strptime(row["TIME"], "%Y-%m-%d %H:%M:%S")
+        except KeyError as exc:
+            raise ValueError(f"Missing field {exc} in {path}") from exc
+        except ValueError as exc:
+            raise ValueError(f"Invalid row value in {path}: {line}") from exc
+
+        measurements.append(
+            Measurement(
+                dsec=dsec,
+                timestamp=timestamp,
+                temperature_c=temperature_c,
+                total_volume=total_volume,
+                concentration=concentration,
+                ph=ph,
+            )
+        )
+
+    if not measurements:
+        raise ValueError(f"No measurement rows found in {path}")
+    return measurements
+
+
 def build_rows(measurements: List[Measurement]) -> List[dict]:
     """Convert measurements into ordered rows for the output CSV."""
 
@@ -208,24 +258,23 @@ def plot_relationships(rows: List[dict], parent_name: str, output_dir: Path) -> 
 def determine_output_paths(
     data_dir: Path, first_timestamp: datetime, output_dir: Path | None
 ) -> tuple[Path, Path, str]:
-    parent_dir = data_dir.resolve().parent
-    parent_name = parent_dir.name
+    parent_name = data_dir.name
     date_fragment = first_timestamp.strftime("%Y%m%d")
     base_name = f"{parent_name}_{date_fragment}"
 
-    target_dir = Path(output_dir) if output_dir else parent_dir
+    target_dir = Path(output_dir) if output_dir else data_dir
     csv_path = target_dir / f"{base_name}.csv"
     plots_dir = target_dir / "plots"
     return csv_path, plots_dir, parent_name
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Compile BinData .mxf files into CSV + plots")
+    parser = argparse.ArgumentParser(description="Compile TD.mxt measurements into CSV + plots")
     parser.add_argument(
         "data_dir",
         nargs="?",
-        default="Blank_4/BinData",
-        help="Directory containing .mxf files (default: Blank_4/BinData)",
+        default="Blank_4",
+        help="Directory containing the folder-specific TD.mxt file (default: Blank_4)",
     )
     parser.add_argument(
         "--output-dir",
@@ -262,11 +311,17 @@ def main() -> None:
     if not data_dir.exists():
         raise SystemExit(f"Data directory {data_dir} does not exist")
 
-    files = sorted(data_dir.glob("*.mxf"))
-    if not files:
-        raise SystemExit(f"No .mxf files found in {data_dir}")
+    if data_dir.is_dir():
+        td_filename = f"{data_dir.name}_TD.mxt"
+        td_path = data_dir / td_filename
+    else:
+        td_path = data_dir
+        data_dir = data_dir.parent
 
-    measurements = [parse_measurement_file(path) for path in files]
+    if not td_path.exists():
+        raise SystemExit(f"TD file {td_path} does not exist")
+
+    measurements = parse_td_file(td_path)
     first_file_timestamp = measurements[0].timestamp
     measurements.sort(key=lambda m: m.dsec)
 

@@ -6,7 +6,8 @@ import re
 import matplotlib.pyplot as plt
 import numpy as np
 
-import common as cmn
+import common_presentation as cmn
+#import common as cmn
 
 #################################### Loading plotting features ##################################
 
@@ -159,21 +160,26 @@ def plot_b2(b2_series, exp_data, plot_dir):
             b2_red_exp,
             yerr=yerr,
             fmt="o",
-            ms=5,
+            color='blue',
+            ms=8,
             lw=1,
             capsize=3,
-            alpha=0.5,
+            alpha=1,
             label=label,
         )
     for series in b2_series:
         ax.plot(
             series["T"],
             series["values"],
-            ms=5,
-            marker="o",
+            ms=15,
+            marker="*",
+            markerfacecolor="none",
+            markeredgewidth=1,
+            color='red',
             lw=1,
-            alpha=0.5,
+            alpha=1,
             label=series["label"],
+            zorder=100,
         )
     ax.set_title("Reduced second virial coefficient ${b_2}^*$ \n of $\gamma$B-crystallin", pad=15)
     ax.legend()

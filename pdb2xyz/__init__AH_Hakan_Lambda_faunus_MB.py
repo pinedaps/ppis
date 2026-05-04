@@ -322,11 +322,15 @@ analysis:
   file: traj.xtc
   frequency: !Every 100
   selections: ["molecule MOL1"]
+- !Trajectory
+  file: traj_final.xyz
+  frequency: !End
+  selections: ["molecule MOL1"]
 
 propagate:
   seed: Hardware
   criterion: Metropolis
-  repeat: 1000
+  repeat: 50000
   collections:
   - !Stochastic
     moves:

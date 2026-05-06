@@ -189,7 +189,7 @@ done
 mv *.gz       	"$DAT_DIR"
 mv $XYZ_OUT   	"$TOPO_DIR"
 mv *.yaml     	"$YAML_DIR"
-mv traj.*       "$TRAJ_DIR"
+mv traj*       "$TRAJ_DIR"
 
 #######################################
 # Step 3: Plot results

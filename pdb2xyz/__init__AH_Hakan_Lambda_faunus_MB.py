@@ -296,12 +296,12 @@ system:
     salt: [!NaCl, {{ saltcon }}]
   blocks:
   - molecule: MOL1
-    N: 50
+    N: 1
     insert: !GridCOM { rotate: true }
   energy:
     nonbonded:
       default:
-        - !Coulomb {cutoff: 20.0}
+        - !Coulomb {cutoff: 100.0}
         - !AshbaughHatch {mixing: arithmetic, cutoff: 20.0}
 
 analysis:
@@ -330,7 +330,7 @@ analysis:
 propagate:
   seed: Hardware
   criterion: Metropolis
-  repeat: 50000
+  repeat: 10000
   collections:
   - !Stochastic
     moves:
@@ -338,12 +338,12 @@ propagate:
       molecule: MOL1
       dp: 1
       weight: 1.0
-      repeat: 50 
+      repeat: 1 
     - !TranslateMolecule
       molecule: MOL1
       dp: 10
       weight: 1.0
-      repeat: 50
+      repeat: 1
 
 """
 

@@ -296,7 +296,7 @@ system:
     salt: [!NaCl, {{ saltcon }}]
   blocks:
   - molecule: MOL1
-    N: 1
+    N: 50
     insert: !GridCOM { rotate: true }
   energy:
     nonbonded:
@@ -330,7 +330,7 @@ analysis:
 propagate:
   seed: Hardware
   criterion: Metropolis
-  repeat: 10000
+  repeat: 50000
   collections:
   - !Stochastic
     moves:
@@ -338,12 +338,12 @@ propagate:
       molecule: MOL1
       dp: 1
       weight: 1.0
-      repeat: 1 
+      repeat: 50 
     - !TranslateMolecule
       molecule: MOL1
       dp: 10
       weight: 1.0
-      repeat: 1
+      repeat: 50
 
 """
 

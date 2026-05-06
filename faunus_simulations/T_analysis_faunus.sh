@@ -44,7 +44,7 @@ Other options:
   -h, --help          Show this help message
 
 Example:
-  $0 --pdb ../pdbs/XXXX --tmin 280 --tmax 320 --tstep 10 -pH 7.1 --saltcon 0.115 --epsilon 0.8368 --outdir XXXX 
+  $0 --pdb ../pdbs/XXXX --tmin 280 --tmax 320 --tstep 10 --pH 7.1 --saltcon 0.115 --epsilon 0.8368 --outdir XXXX 
   $0 --pdb ../pdbs/XXXX --temps 290,300,310 --pH 7.1 --saltcon 0.115 --epsilon 0.8368 --outdir XXXX
 EOF
 }

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
 # ----------------------------------------
-#   T_analysis_faunus.sh
-#   Temperature workflow:
-#     • Parse T inputs
+#   eps_analysis_faunus_lunarc.sh
+#   Epsilon workflow (LUNARC):
+#     • Parse epsilon inputs
 #     • Run topology generation
 #     • Run faunus
 #     • Calculate and print execution time
@@ -25,27 +25,27 @@ usage() {
     cat <<EOF
 Usage: $0 [OPTIONS]
 
-Temperature input options (choose one):
-  --pdb <path>        
+Epsilon input options (choose one):
+  --pdb <path>
         Pdb path
-  --tmin <value> --tmax <value> --tstep <value>
-        Generate a temperature array from min to max with given step
-  --temps <comma-separated list>
-        Provide an explicit list, e.g. --temps 300,310,320
+  --epsmin <value> --epsmax <value> --epsstep <value>
+        Generate an epsilon array from min to max with given step
+  --epsilons <comma-separated list>
+        Provide an explicit list, e.g. --epsilons 0.5,0.8368,1.0
+  --T <value>
+        Temperature in Kelvin
   --pH <value>
         Provide a pH value
   --saltcon <value>
-        Salt concentration in mol/L  
-  --epsilon <value>
-        Provide the reference epsilon for the LJ potential at 293 K
+        Salt concentration in mol/L
 
 Other options:
-  --outdir <path>     Output directory (default: ./<input_pdb>)  
+  --outdir <path>     Output directory (default: ./<input_pdb>)
   -h, --help          Show this help message
 
 Example:
-  $0 --pdb ../pdbs/XXXX --tmin 280 --tmax 320 --tstep 10 -pH 7.1 --saltcon 0.115 --epsilon 0.8368 --outdir XXXX 
-  $0 --pdb ../pdbs/XXXX --temps 290,300,310 --pH 7.1 --saltcon 0.115 --epsilon 0.8368 --outdir XXXX
+  $0 --pdb ../pdbs/XXXX --epsmin 0.5 --epsmax 1.0 --epsstep 0.1 --T 298.15 --pH 7.1 --saltcon 0.115 --outdir XXXX
+  $0 --pdb ../pdbs/XXXX --epsilons 0.5,0.8368,1.0 --T 298.15 --pH 7.1 --saltcon 0.115 --outdir XXXX
 EOF
 }
 
@@ -53,28 +53,30 @@ EOF
 # Parse arguments
 #######################################
 
-# To support both long options and getopts,
-# we manually parse long options:
 while [[ $# -gt 0 ]]; do
     case "$1" in
 	--pdb)
             PDB="$2"
             shift 2
             ;;
-        --tmin)
-            TMIN="$2"
+        --epsmin)
+            EPSMIN="$2"
             shift 2
             ;;
-        --tmax)
-            TMAX="$2"
+        --epsmax)
+            EPSMAX="$2"
             shift 2
             ;;
-        --tstep)
-            TSTEP="$2"
+        --epsstep)
+            EPSSTEP="$2"
             shift 2
             ;;
-        --temps)
-            USER_TEMPS="$2"
+        --epsilons)
+            USER_EPSILONS="$2"
+            shift 2
+            ;;
+        --T)
+            TC="$2"
             shift 2
             ;;
         --pH)
@@ -83,10 +85,6 @@ while [[ $# -gt 0 ]]; do
             ;;
 	--saltcon)
             SC="$2"
-            shift 2
-            ;;
-	--epsilon)
-            EC="$2"
             shift 2
             ;;
 	--outdir)
@@ -106,13 +104,14 @@ while [[ $# -gt 0 ]]; do
 done
 
 #######################################
-# Default values and build faunus-rs
+# Default values
 #######################################
 
 FILE="${PDB##*/}"
 OUTDIR="${OUTDIR:-$FILE}"
 FILE="${FILE%.*}"
 
+# Resolve to absolute paths so subshells and cd's don't break relative refs
 PDB=$(realpath "$PDB")
 mkdir -p "$OUTDIR"
 OUTDIR=$(realpath "$OUTDIR")
@@ -120,21 +119,20 @@ OUTDIR=$(realpath "$OUTDIR")
 echo "The output directory is $OUTDIR"
 
 #######################################
-# Build temperature array
+# Build epsilon array
 #######################################
 
-T_ARRAY=()
-if [[ -n "${USER_TEMPS:-}" ]]; then
-    IFS=',' read -ra T_ARRAY <<< "$USER_TEMPS"
-elif [[ -n "${TMIN:-}" && -n "${TMAX:-}" && -n "${TSTEP:-}" ]]; then
-    T_ARRAY=()
-    T="$TMIN"
-    while (( $(echo "$T <= $TMAX" | bc -l) )); do
-        T_ARRAY+=("$T")
-        T=$(echo "$T + $TSTEP" | bc -l)
+EPS_ARRAY=()
+if [[ -n "${USER_EPSILONS:-}" ]]; then
+    IFS=',' read -ra EPS_ARRAY <<< "$USER_EPSILONS"
+elif [[ -n "${EPSMIN:-}" && -n "${EPSMAX:-}" && -n "${EPSSTEP:-}" ]]; then
+    EPS="$EPSMIN"
+    while (( $(echo "$EPS <= $EPSMAX" | bc -l) )); do
+        EPS_ARRAY+=("$EPS")
+        EPS=$(echo "$EPS + $EPSSTEP" | bc -l)
     done
 else
-    echo "ERROR: You must provide either --temps or --tmin/--tmax/--tstep." >&2
+    echo "ERROR: You must provide either --epsilons or --epsmin/--epsmax/--epsstep." >&2
     exit 1
 fi
 
@@ -149,10 +147,10 @@ PLOT_DIR="$OUTDIR/plots"
 mkdir -p "$TOPO_DIR" "$PLOT_DIR"
 
 echo "pdb: $FILE"
-echo "Temperatures: ${T_ARRAY[*]}"
+echo "Epsilons: ${EPS_ARRAY[*]}"
+echo "T: $TC"
 echo "pH: $PH"
 echo "[Salt]: $SC"
-echo "epsilon: $EC"
 echo
 
 #######################################
@@ -160,34 +158,34 @@ echo
 #######################################
 
 PIDS=()
-for T in "${T_ARRAY[@]}"; do
+for EPS in "${EPS_ARRAY[@]}"; do
     (
-        T_SUBDIR="${OUTDIR}/${OUTDIR_BASE}_${T}"
-        T_DAT_DIR="$T_SUBDIR/results/dat"
-        T_YAML_DIR="$T_SUBDIR/results/yaml"
-        T_TRAJ_DIR="$T_SUBDIR/results/traj"
-        mkdir -p "$T_DAT_DIR" "$T_YAML_DIR" "$T_TRAJ_DIR"
-        cd "$T_SUBDIR"
+        EPS_SUBDIR="${OUTDIR}/${OUTDIR_BASE}_${EPS}"
+        EPS_DAT_DIR="$EPS_SUBDIR/results/dat"
+        EPS_YAML_DIR="$EPS_SUBDIR/results/yaml"
+        EPS_TRAJ_DIR="$EPS_SUBDIR/results/traj"
+        mkdir -p "$EPS_DAT_DIR" "$EPS_YAML_DIR" "$EPS_TRAJ_DIR"
+        cd "$EPS_SUBDIR"
 
-        TOPO_OUT="topology_${FILE}_T${T}.yaml"
-        echo "  Running topology for pdb = $FILE at T = $T → $TOPO_OUT"
+        TOPO_OUT="topology_${FILE}_eps${EPS}.yaml"
+        echo "  Running topology for pdb = $FILE at epsilon = $EPS → $TOPO_OUT"
         python3 $HOME/pinedaps/ppis/pdb2xyz/__init__AH_Hakan_Lambda_faunus_MB.py \
              -i "$PDB" \
              -o "${FILE}.xyz" \
              -t "$TOPO_OUT" \
-             --T "$T"  \
+             --T "$TC"  \
              --pH "$PH" \
              --saltcon "$SC"  \
-             --epsilon "$EC"
-        echo "  Topology generation complete for T = $T"
+             --epsilon "$EPS"
+        echo "  Topology generation complete for epsilon = $EPS"
 
-        echo "  Faunus simulation for T = $T"
+        echo "  Faunus simulation for epsilon = $EPS"
         $HOME/pinedaps/faunus-rs/target/release/faunus run --input "$TOPO_OUT"
 
         mv "$TOPO_OUT"   "$TOPO_DIR/"
-        mv output.yaml   "$T_YAML_DIR/"
-        mv *.gz          "$T_DAT_DIR/"
-        mv traj*         "$T_TRAJ_DIR/"
+        mv output.yaml   "$EPS_YAML_DIR/"
+        mv *.gz          "$EPS_DAT_DIR/"
+        mv traj*         "$EPS_TRAJ_DIR/"
     ) &
     PIDS+=($!)
 done
@@ -210,7 +208,7 @@ echo "Faunus simulations complete."
 echo
 
 ###########################################
-# Step 3: Calculate and log execution time
+# Step 4: Calculate and log execution time
 ###########################################
 
 SCRIPT_END_TIME=$(date +%s)

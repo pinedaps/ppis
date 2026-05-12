@@ -113,6 +113,10 @@ FILE="${PDB##*/}"
 OUTDIR="${OUTDIR:-$FILE}"
 FILE="${FILE%.*}"
 
+PDB=$(realpath "$PDB")
+mkdir -p "$OUTDIR"
+OUTDIR=$(realpath "$OUTDIR")
+
 echo "The output directory is $OUTDIR"
 
 #######################################
@@ -138,16 +142,11 @@ fi
 # Create output directory and filenames
 #########################################
 
-mkdir -p "$OUTDIR"
+OUTDIR_BASE=$(basename "$OUTDIR")
 TOPO_DIR="$OUTDIR/topologies"
-DAT_DIR="$OUTDIR/results/dat"
-YAML_DIR="$OUTDIR/results/yaml"
-TRAJ_DIR="$OUTDIR/results/traj"
 PLOT_DIR="$OUTDIR/plots"
-XYZ_OUT="${FILE}.xyz"
 
-mkdir -p "$TOPO_DIR" "$DAT_DIR" "$YAML_DIR" "$TRAJ_DIR" "$PLOT_DIR"
-mkdir -p "$OUTDIR/plots"
+mkdir -p "$TOPO_DIR" "$PLOT_DIR"
 
 echo "pdb: $FILE"
 echo "Temperatures: ${T_ARRAY[*]}"
@@ -157,46 +156,55 @@ echo "epsilon: $EC"
 echo
 
 #######################################
-# Step 1: Generate topology files
+# Steps 1+2: Topology + Faunus (parallel)
 #######################################
 
-
+PIDS=()
 for T in "${T_ARRAY[@]}"; do
-    TOPO_OUT="topology_${FILE}_T${T}.yaml"
-    echo "  Running topology for pdb = $FILE at T = $T → $TOPO_OUT"
-    python3 $HOME/projects/ppis/pdb2xyz/__init__AH_Hakan_Lambda_faunus_MB.py \
-         -i "$PDB" \
-         -o "$XYZ_OUT" \
-         -t "$TOPO_OUT" \
-	 --T "$T"  \
-         --pH "$PH" \
-         --saltcon "$SC"  \
-         --epsilon "$EC" 
-	 
-    echo "  Topology generation complete."
+    (
+        T_SUBDIR="${OUTDIR}/${OUTDIR_BASE}_${T}"
+        T_DAT_DIR="$T_SUBDIR/results/dat"
+        T_YAML_DIR="$T_SUBDIR/results/yaml"
+        T_TRAJ_DIR="$T_SUBDIR/results/traj"
+        mkdir -p "$T_DAT_DIR" "$T_YAML_DIR" "$T_TRAJ_DIR"
+        cd "$T_SUBDIR"
 
-#######################################
-# Step 2: Run Faunus
-#######################################
+        TOPO_OUT="topology_${FILE}_T${T}.yaml"
+        echo "  Running topology for pdb = $FILE at T = $T → $TOPO_OUT"
+        python3 $HOME/projects/ppis/pdb2xyz/__init__AH_Hakan_Lambda_faunus_MB.py \
+             -i "$PDB" \
+             -o "${FILE}.xyz" \
+             -t "$TOPO_OUT" \
+             --T "$T"  \
+             --pH "$PH" \
+             --saltcon "$SC"  \
+             --epsilon "$EC"
+        echo "  Topology generation complete for T = $T"
 
-    echo "  Faunus simulation for T = $T " 
-    echo
-    $HOME/projects/faunus-rs/target/release/faunus run --input "$TOPO_OUT"
-    mv "$TOPO_OUT" "$TOPO_DIR"
-    mv "output.yaml" "output_${T}.yaml"
+        echo "  Faunus simulation for T = $T"
+        $HOME/projects/faunus-rs/target/release/faunus run --input "$TOPO_OUT"
+
+        mv "$TOPO_OUT"   "$TOPO_DIR/"
+        mv output.yaml   "$T_YAML_DIR/"
+        mv *.gz          "$T_DAT_DIR/"
+        mv traj*         "$T_TRAJ_DIR/"
+    ) &
+    PIDS+=($!)
 done
 
-mv *.gz       	"$DAT_DIR"
-mv $XYZ_OUT   	"$TOPO_DIR"
-mv *.yaml     	"$YAML_DIR"
-mv traj*       "$TRAJ_DIR"
+echo "Waiting for ${#PIDS[@]} parallel simulations to finish..."
+FAILED=0
+for PID in "${PIDS[@]}"; do
+    wait "$PID" || { echo "ERROR: simulation job $PID failed" >&2; FAILED=1; }
+done
+[[ $FAILED -eq 0 ]] || exit 1
 
 #######################################
 # Step 3: Plot results
 #######################################
 
 echo "Generating plots..."
-python3 $HOME/projects/ppis/faunus_simulations/plot_scripts/plot_dat.py --dat_dir "$DAT_DIR" --plots_dir "$PLOT_DIR"
+python3 $HOME/projects/ppis/faunus_simulations/plot_scripts/plot_dat.py --dat_dir "$OUTDIR" --plots_dir "$PLOT_DIR"
 
 echo "Faunus simulations complete."
 echo

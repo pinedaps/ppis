@@ -68,14 +68,12 @@ lscpu | head -20
 echo ""
 
 module purge
-module add GCCcore/12.3.0 
+module add GCCcore/12.3.0
 module add Python/3.11.3
 
 source ~/duello_env/bin/activate
 
-OUTDIR="4ZLT_epsilon_0.8368"
-
-./T_analysis_faunus_lunarc.sh --pdb ../pdbs/4LZT_nohet.pdb --temps 298.15 --pH 7.0 --saltcon 0.104 --epsilon 0.8368 --outdir $OUTDIR
+"$(dirname "$0")/T_analysis_faunus_lunarc.sh" "$@"
 
 deactivate
 
@@ -101,5 +99,6 @@ echo "  - Allocated Resources"
 echo "  - Actual Usage"
 echo "========================================"
 
-mv *.err *.out $OUTDIR
+OUTDIR=$(echo "$@" | grep -oP '(?<=--outdir )\S+')
+[[ -n "$OUTDIR" && -d "$OUTDIR" ]] && mv *.err *.out "$OUTDIR/"
 

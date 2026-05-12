@@ -73,9 +73,7 @@ module add Python/3.11.3
 
 source ~/duello_env/bin/activate
 
-OUTDIR="4LZT_eps_scan"
-
-./eps_analysis_faunus.sh --pdb ../pdbs/4LZT_nohet.pdb --epsilons 0.5,0.8368,1.0 --T 298.15 --pH 7.0 --saltcon 0.104 --outdir $OUTDIR
+"$(dirname "$0")/eps_analysis_faunus_lunarc.sh" "$@"
 
 deactivate
 
@@ -101,4 +99,5 @@ echo "  - Allocated Resources"
 echo "  - Actual Usage"
 echo "========================================"
 
-mv *.err *.out $OUTDIR
+OUTDIR=$(echo "$@" | grep -oP '(?<=--outdir )\S+')
+[[ -n "$OUTDIR" && -d "$OUTDIR" ]] && mv *.err *.out "$OUTDIR/"

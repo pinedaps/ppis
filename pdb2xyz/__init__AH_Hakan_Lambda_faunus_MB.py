@@ -301,7 +301,7 @@ system:
   energy:
     nonbonded:
       default:
-        - !Coulomb {cutoff: 100.0}
+        - !Coulomb {cutoff: 115.0}
         - !AshbaughHatch {mixing: arithmetic, cutoff: 20.0}
 
 analysis:
@@ -320,7 +320,7 @@ analysis:
   frequency: !Every 10
 - !Trajectory
   file: traj.xtc
-  frequency: !Every 100
+  frequency: !Every 5
   selections: ["molecule MOL1"]
 - !Trajectory
   file: traj_final.xyz

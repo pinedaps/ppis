@@ -13,7 +13,7 @@
 #SBATCH -o %x_%j.out
 #SBATCH -e %x_%j.err
 
-# print the sbacth submission file
+# print the sbatch submission file
 
 cat $0
 
@@ -22,12 +22,12 @@ cat $0
 #SBATCH -N 1
 #SBATCH --ntasks-per-node=1
 
-# NVIDIA A100 GPUs with AMD (Uncomment these line if GPU is needed)
+# NVIDIA A100 GPUs with AMD (Uncomment if GPU is needed)
 ##SBATCH -p gpua100
 
-# Job notification (Uncomment these line if need)
+# Job notification (Uncomment if needed)
 ##SBATCH --mail-user=sebastian.pineda_pineda@chem.lu.se
-##SBATCH --mail-type=END # other optinal types:BEGIN,END,FAIL,REQUEUE,ALL
+##SBATCH --mail-type=END # other optional types: BEGIN,END,FAIL,REQUEUE,ALL
 
 #######################################
 # Log job resources and configuration
@@ -73,7 +73,7 @@ module add Python/3.11.3
 
 source ~/duello_env/bin/activate
 
-"$(dirname "$0")/T_analysis_faunus_lunarc.sh" "$@"
+"$(dirname "$0")/analysis_faunus.sh" "$@"
 
 deactivate
 
@@ -101,4 +101,3 @@ echo "========================================"
 
 OUTDIR=$(echo "$@" | grep -oP '(?<=--outdir )\S+')
 [[ -n "$OUTDIR" && -d "$OUTDIR" ]] && mv *.err *.out "$OUTDIR/"
-

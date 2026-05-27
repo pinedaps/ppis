@@ -1,0 +1,40 @@
+# Hard sphere system for Percus-Yevick verification
+# Pure WCA (hard sphere limit): sigma=40 A, N=100, eta~0.30 in 224^3 box
+# Large dp to escape overlaps from grid insertion
+
+atoms:
+  - {name: SP, mass: 1.0, charge: 0.0, sigma: 40.0, epsilon: 2.479}
+
+molecules:
+  - name: sphere
+    from_structure: sphere.xyz
+
+system:
+  cell: !Cuboid [224, 224, 224]
+  medium:
+    permittivity: !Water
+    temperature: 298.15
+
+  blocks:
+    - molecule: sphere
+      N: 100
+      insert: !GridCOM {}
+
+  energy:
+    nonbonded:
+      default:
+        - !WeeksChandlerAndersen {mixing: LB}
+
+analysis:
+  - !Energy
+    file: energy.csv.gz
+    frequency: !Every 10
+
+propagate:
+  seed: !Fixed 42
+  criterion: Metropolis
+  repeat: 5000
+  collections:
+    - !Stochastic
+      moves:
+        - !TranslateAtom {molecule: sphere, atom: SP, dp: 40.0, repeat: 100}

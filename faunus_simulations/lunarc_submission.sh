@@ -2,10 +2,10 @@
 
 # Project information
 
-#SBATCH -A lu2025-2-42
+#SBATCH -A lu2026-2-71
 
 # Walltime HH:MM:SS
-#SBATCH -t 00:05:00
+#SBATCH -t 99:59:59
 
 # Job name and output files
 
@@ -73,7 +73,7 @@ module add Python/3.11.3
 
 source ~/duello_env/bin/activate
 
-"$(dirname "$0")/analysis_faunus.sh" "$@"
+"$SLURM_SUBMIT_DIR/analysis_faunus.sh" "$@"
 
 deactivate
 

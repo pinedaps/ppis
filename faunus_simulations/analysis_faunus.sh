@@ -12,8 +12,8 @@ echo "Script started at: $SCRIPT_START_DATE"
 # Environment auto-detection
 #######################################
 
-if [[ -d "$HOME/pinedaps" ]]; then
-    PROJ_ROOT="$HOME/pinedaps"
+if [[ -d "$HOME/ppis" ]]; then
+    PROJ_ROOT="$HOME"
 else
     PROJ_ROOT="$HOME/projects"
 fi

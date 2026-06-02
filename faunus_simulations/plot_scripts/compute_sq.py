@@ -5,13 +5,29 @@ Compute S(q) and S_eff(q) from a many-body I(q) simulation and a P(q)/beta(q) fi
 
 Usage:
     python3 compute_sq.py -N 50 -i I_q/intensity.csv -f p_q/ff_4lzt.csv [-o sq_output.png]
+    python3 compute_sq.py -N 50 -i 4LZT_ph_4.5_I_119/I_q/intensity.csv -f p_q/ff_4lzt.csv -e exp_seff.dat
 """
 
 import argparse
+import re
 import numpy as np
 import pandas as pd
 from scipy.interpolate import CubicSpline
 import matplotlib.pyplot as plt
+
+# ── Presentation style (mirrors ~/projects/ppis/plot_scripts/common_presentation.py) ──
+plt.rcParams.update({
+    "text.usetex": False,
+    "font.size": 18,
+    "axes.titlesize": 0,
+    "axes.labelsize": 18,
+    "legend.fontsize": 13,
+    "legend.edgecolor": "none",
+    "legend.frameon": True,
+    "legend.framealpha": 0.5,
+    "axes.facecolor": "#ffffff",
+    "figure.autolayout": True,
+})
 
 
 def parse_args():
@@ -24,9 +40,32 @@ def parse_args():
                    help="I(q) CSV file with columns q,total  (default: I_q/intensity.csv)")
     p.add_argument("-f", "--formfactor", default="p_q/ff_4lzt.csv",
                    help="P(q) CSV file with columns q,total,beta  (default: p_q/ff_4lzt.csv)")
+    p.add_argument("-e", "--exp", default=None,
+                   help="Experimental Seff(q) file (two columns: q, Seff; "
+                        "first '#' comment line used as citation label)")
     p.add_argument("-o", "--output", default=None,
                    help="Output plot filename (default: show interactively)")
     return p.parse_args()
+
+
+def infer_sim_label(intensity_path):
+    """Extract pH and ionic strength from the intensity file path."""
+    m = re.search(r'ph_([0-9]+(?:\.[0-9]+)?)_I_([0-9]+(?:\.[0-9]+)?)', intensity_path,
+                  re.IGNORECASE)
+    if m:
+        return rf"pH={m.group(1)}, I={m.group(2)} mM"
+    return "Simulation"
+
+
+def load_exp_seff(exp_path):
+    """Load experimental Seff(q) data. Returns (q, Seff, citation_label)."""
+    citation = "Experiment"
+    with open(exp_path) as f:
+        first = f.readline()
+        if first.startswith('#'):
+            citation = first.lstrip('#').strip()
+    data = np.loadtxt(exp_path, comments='#')
+    return data[:, 0], data[:, 1], citation
 
 
 def main():
@@ -98,31 +137,25 @@ def main():
     # I(q) — log-log
     fig, ax = plt.subplots(figsize=(7, 5))
     ax.loglog(q_iq, I_q, "o-", color="darkorange", linewidth=1.5, markersize=5)
-    ax.set_xlabel(r"$q$ / Å$^{-1}$", fontsize=13)
-    ax.set_ylabel(r"$I(q)$ / a.u.", fontsize=13)
-    ax.set_title(rf"Scattering intensity  ($N={args.N}$)", fontsize=13)
+    ax.set_xlabel(r"$q$ / Å$^{-1}$")
+    ax.set_ylabel(r"$I(q)$ / a.u.")
     ax.tick_params(which="both", direction="in")
-    plt.tight_layout()
     _save_or_show(fig, _stem(args.output, "Iq"), "I(q)")
 
     # P(q) — log-log
     fig, ax = plt.subplots(figsize=(7, 5))
     ax.loglog(q_iq, P_interp, "o-", color="seagreen", linewidth=1.5, markersize=5)
-    ax.set_xlabel(r"$q$ / Å$^{-1}$", fontsize=13)
-    ax.set_ylabel(r"$P(q)$ / a.u.", fontsize=13)
-    ax.set_title(r"Form factor $P(q)$", fontsize=13)
+    ax.set_xlabel(r"$q$ / Å$^{-1}$")
+    ax.set_ylabel(r"$P(q)$ / a.u.")
     ax.tick_params(which="both", direction="in")
-    plt.tight_layout()
     _save_or_show(fig, _stem(args.output, "Pq"), "P(q)")
 
     # beta(q) — semi-log x
     fig, ax = plt.subplots(figsize=(7, 5))
     ax.semilogx(q_iq, beta_interp, "o-", color="mediumpurple", linewidth=1.5, markersize=5)
-    ax.set_xlabel(r"$q$ / Å$^{-1}$", fontsize=13)
-    ax.set_ylabel(r"$\beta(q)$", fontsize=13)
-    ax.set_title(r"Contrast factor $\beta(q)$", fontsize=13)
+    ax.set_xlabel(r"$q$ / Å$^{-1}$")
+    ax.set_ylabel(r"$\beta(q)$")
     ax.tick_params(which="both", direction="in")
-    plt.tight_layout()
     _save_or_show(fig, _stem(args.output, "beta"), r"beta(q)")
 
     # S(q) — semi-log x
@@ -130,25 +163,36 @@ def main():
     ax.semilogx(q_iq, S_q, "o-", color="crimson", linewidth=1.5,
                 markersize=5, label=r"$S(q)$")
     ax.axhline(1.0, color="gray", linestyle="--", linewidth=0.8, label="S=1")
-    ax.set_xlabel(r"$q$ / Å$^{-1}$", fontsize=13)
-    ax.set_ylabel(r"$S(q)$", fontsize=13)
-    ax.set_title(rf"Structure factor  ($N={args.N}$)", fontsize=13)
-    ax.legend(fontsize=11)
+    ax.set_xlabel(r"$q$ / Å$^{-1}$")
+    ax.set_ylabel(r"$S(q)$")
+    ax.legend()
     ax.tick_params(which="both", direction="in")
-    plt.tight_layout()
     _save_or_show(fig, _stem(args.output, "Sq"), "S(q)")
 
     # S_eff(q) — semi-log x
+    sim_label = infer_sim_label(args.intensity)
+
     fig, ax = plt.subplots(figsize=(7, 5))
     ax.semilogx(q_iq, S_eff_q, "o-", color="steelblue", linewidth=1.5,
-                markersize=5, label=r"$S_\mathrm{eff}(q)$")
-    ax.axhline(1.0, color="gray", linestyle="--", linewidth=0.8, label="S=1")
-    ax.set_xlabel(r"$q$ / Å$^{-1}$", fontsize=13)
-    ax.set_ylabel(r"$S_\mathrm{eff}(q)$", fontsize=13)
-    ax.set_title(rf"Effective structure factor  ($N={args.N}$)", fontsize=13)
-    ax.legend(fontsize=11)
+                markersize=5, label=sim_label)
+    ax.axhline(1.0, color="gray", linestyle="--", linewidth=0.8)
+
+    if args.exp is not None:
+        q_exp, seff_exp, citation = load_exp_seff(args.exp)
+        ax.semilogx(q_exp, seff_exp, "s--", color="tomato", linewidth=1.5,
+                    markersize=5, label=citation)
+
+    ax.set_xlabel(r"$q$ / Å$^{-1}$")
+    ax.set_ylabel(r"Effective structure factor, $S_\mathrm{eff}(q)$")
+    ax.legend()
     ax.tick_params(which="both", direction="in")
-    plt.tight_layout()
+
+    ax.text(0.2, 0.97, "100 mg/mL\n$T$ = 20°C",
+            transform=ax.transAxes, fontsize=13,
+            verticalalignment="top", horizontalalignment="right",
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="white",
+                      edgecolor="gray", alpha=0.7))
+
     _save_or_show(fig, _stem(args.output, "Seff"), "S_eff(q)")
 
 

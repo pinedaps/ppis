@@ -1,0 +1,1 @@
+duello scan --mol1 ../4LZT.xyz --mol2 ../4LZT.xyz --rmin 23 --rmax 60 --dr 0.5 --resolution 0.7 --cutoff 1000 --top topology_T268.15.yaml --molarity 212 --temperature 268.15 --pmf scan_T268.15.dat --backend reference --fixed-dielectric 85.9

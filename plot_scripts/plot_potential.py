@@ -30,7 +30,13 @@ def parse_args():
         "-pe",
         "--path_exp",
         type=str,
-        help="path to the experimental data file",
+        nargs="*",
+        help="one or more paths to experimental data files (paired by index with -p datasets)",
+    )
+    parser.add_argument(
+        "--no-eps",
+        action="store_true",
+        help="omit the epsilon value from dataset labels",
     )
     parser.add_argument(
         "-s",
@@ -41,14 +47,28 @@ def parse_args():
     return parser.parse_args()
 
 
-def infer_dataset_label(path):
+def format_dataset_label(name, show_eps=True):
+    s = re.sub(r"^fit_", "", name)
+    m = re.match(
+        r"pH_([0-9]+(?:\.[0-9]+)?)_I_([0-9]+(?:\.[0-9]+)?)_eps_([0-9]+(?:\.[0-9]+)?)",
+        s,
+    )
+    if m:
+        pH, I, eps = m.group(1), m.group(2), m.group(3)
+        if show_eps:
+            return rf"pH={pH}, I={I} mM, $\epsilon$={eps} kJ/mol"
+        return rf"pH={pH}, I={I} mM"
+    return name
+
+
+def infer_dataset_label(path, show_eps=True):
     abs_path = os.path.abspath(path)
     stripped = abs_path.rstrip(os.sep)
     base = os.path.basename(stripped)
     if base == "scans":
         parent = os.path.dirname(stripped)
-        return os.path.basename(parent)
-    return base
+        base = os.path.basename(parent)
+    return format_dataset_label(base, show_eps=show_eps)
 
 
 def infer_plot_dir(path):
@@ -149,42 +169,50 @@ def plot_potentials(potential_series, plot_dir):
     plt.close(fig)
 
 
-def plot_b2(b2_series, exp_data, plot_dir):
+def plot_b2(b2_series, exp_data_list, plot_dir):
     fig, ax = plt.subplots()
-    if exp_data is not None:
-        label = exp_data['label']
-        T_exp, b2_red_exp, b2_min, b2_max = exp_data['data']
-        yerr = np.vstack([b2_min, b2_max])
-        ax.errorbar(
-            T_exp,
-            b2_red_exp,
-            yerr=yerr,
-            fmt="o",
-            color='blue',
-            ms=8,
-            lw=1,
-            capsize=3,
-            alpha=1,
-            label=label,
-        )
-    for series in b2_series:
-        ax.plot(
-            series["T"],
-            series["values"],
-            ms=15,
-            marker="*",
-            markerfacecolor="none",
-            markeredgewidth=1,
-            color='red',
-            lw=1,
-            alpha=1,
-            label=series["label"],
-            zorder=100,
-        )
-    ax.set_title("Reduced second virial coefficient ${b_2}^*$ \n of $\gamma$B-crystallin", pad=15)
-    ax.legend()
+    colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+    n = max(len(b2_series), len(exp_data_list))
+    for i in range(n):
+        color = colors[i % len(colors)]
+        if i < len(exp_data_list):
+            exp_data = exp_data_list[i]
+            T_exp, b2_red_exp, b2_min, b2_max = exp_data['data']
+            yerr = np.vstack([b2_min, b2_max])
+            ax.errorbar(
+                T_exp,
+                b2_red_exp,
+                yerr=yerr,
+                fmt="o",
+                color=color,
+                ms=8,
+                lw=1,
+                capsize=3,
+                alpha=1,
+                label="Exp. " + exp_data['label'],
+                zorder=1,
+            )
+    for i in range(n):
+        color = colors[i % len(colors)]
+        if i < len(b2_series):
+            series = b2_series[i]
+            ax.plot(
+                series["T"],
+                series["values"],
+                ms=15,
+                marker="*",
+                markerfacecolor="none",
+                markeredgewidth=1,
+                color=color,
+                lw=1,
+                alpha=1,
+                label="Sim. " + series["label"],
+                zorder=100,
+            )
+    #ax.set_title("Reduced second virial coefficient ${b_2}^*$ \n of $\gamma$B-crystallin", pad=15)
+    ax.legend(loc='lower right')
     ax.set_xlabel(r"Temperature, T [$K$]")
-    ax.set_ylabel(r"$b_2^*=b_2/b_2^{HS}$")
+    ax.set_ylabel(r"Second virial coeff., $b_2$")
     os.makedirs(plot_dir, exist_ok=True)
     plt.savefig(os.path.join(plot_dir, "B2.png"), dpi=EXPORT_DPI)
     plt.close(fig)
@@ -211,7 +239,7 @@ def main():
     datasets_count = len(data_dirs)
 
     for directory in data_dirs:
-        dataset_label = infer_dataset_label(directory)
+        dataset_label = infer_dataset_label(directory, show_eps=not args.no_eps)
         entries = sorted([name for name in os.listdir(directory) if name.endswith(".dat")])
         if not entries:
             print(f"Warning: no .dat scan files found in {directory}")
@@ -253,9 +281,14 @@ def main():
 
     plot_potentials(potential_series, plot_dir)
 
-    exp_data = load_experimental_data(args.path_exp)
+    exp_data_list = []
+    if args.path_exp:
+        for pe in args.path_exp:
+            ed = load_experimental_data(pe)
+            if ed is not None:
+                exp_data_list.append(ed)
     if b2_series:
-        plot_b2(b2_series, exp_data, plot_dir)
+        plot_b2(b2_series, exp_data_list, plot_dir)
     else:
         print("No B2 data found across the provided datasets. Skipping B2 plot.")
 

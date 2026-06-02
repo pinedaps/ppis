@@ -1,0 +1,1 @@
+cgkitten --temperature 268.15 --ionic-strength 212 --cg multi ../4LZT.cif convert --ph 7.8 --top topology_T268.15.yaml --scale-hydrophobic lambda:0.21285

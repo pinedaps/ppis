@@ -1,0 +1,20 @@
+Issue: duello scan panics with TemperatureOutOfRange at T=268.15 K
+---------------------------------------------------------------
+The coulomb-0.4.0 crate (medium.rs:131) computes the water dielectric constant
+from temperature using a formula valid only above 273.15 K (0°C). At 268.15 K
+(-5°C) it panics.
+
+Fix: use --fixed-dielectric to bypass the automatic computation.
+
+Estimated dielectric constant at 268.15 K (~85.9) via Malmberg-Maryott
+extrapolation (linear, ~0.36/°C decrease from ~87.7 at 0°C).
+
+Working command:
+  duello scan --mol1 ../4LZT.xyz --mol2 ../4LZT.xyz \
+    --rmin 23 --rmax 60 --dr 0.5 \
+    --resolution 0.7 --cutoff 1000 \
+    --top topology_T268.15.yaml \
+    --molarity 212 --temperature 268.15 \
+    --pmf scan_T268.15.dat \
+    --backend reference \
+    --fixed-dielectric 85.9

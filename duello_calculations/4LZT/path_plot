@@ -1,0 +1,1 @@
+python3 ../../plot_scripts/plot_potential.py -p fit_pH_7.8_I_212_eps_0.6620 fit_pH_4.5_I_219_eps_0.6391 -pe ../../experiments/4LZT_ph_7.8_I_212.dat ../../experiments/4LZT_ph_4.5_I_219.dat -s 17 --no-eps

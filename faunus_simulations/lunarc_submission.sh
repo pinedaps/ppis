@@ -5,7 +5,7 @@
 #SBATCH -A lu2026-2-71
 
 # Walltime HH:MM:SS
-#SBATCH -t 99:59:59
+#SBATCH -t 149:59:59
 
 # Job name and output files
 

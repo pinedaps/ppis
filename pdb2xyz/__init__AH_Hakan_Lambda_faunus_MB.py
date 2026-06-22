@@ -289,19 +289,19 @@ molecules:
   from_structure: {{ xyz_path }}
 
 system:
-  cell: !Cuboid [290.0, 290.0, 290.0]
+  cell: !Cuboid [417.94, 417.94, 417.94]
   medium:
     permittivity: !Water
     temperature: {{ T }}
     salt: [!NaCl, {{ saltcon }}]
   blocks:
   - molecule: MOL1
-    N: 100
+    N: 300
     insert: !GridCOM { rotate: true }
   energy:
     nonbonded:
       default:
-        - !Coulomb {cutoff: 145.0}
+        - !Coulomb {cutoff: 47.1}
         - !AshbaughHatch {mixing: arithmetic, cutoff: 20.0}
 
 analysis:

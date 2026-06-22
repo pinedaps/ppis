@@ -137,7 +137,7 @@ def main():
     # I(q) — log-log
     fig, ax = plt.subplots(figsize=(7, 5))
     ax.loglog(q_iq, I_q, "o-", color="darkorange", linewidth=1.5, markersize=5)
-    ax.set_xlabel(r"$q$ / Å$^{-1}$")
+    ax.set_xlabel(r"$q$ [Å$^{-1}$]")
     ax.set_ylabel(r"$I(q)$ / a.u.")
     ax.tick_params(which="both", direction="in")
     _save_or_show(fig, _stem(args.output, "Iq"), "I(q)")
@@ -145,7 +145,7 @@ def main():
     # P(q) — log-log
     fig, ax = plt.subplots(figsize=(7, 5))
     ax.loglog(q_iq, P_interp, "o-", color="seagreen", linewidth=1.5, markersize=5)
-    ax.set_xlabel(r"$q$ / Å$^{-1}$")
+    ax.set_xlabel(r"$q$ [Å$^{-1}$]")
     ax.set_ylabel(r"$P(q)$ / a.u.")
     ax.tick_params(which="both", direction="in")
     _save_or_show(fig, _stem(args.output, "Pq"), "P(q)")
@@ -153,7 +153,7 @@ def main():
     # beta(q) — semi-log x
     fig, ax = plt.subplots(figsize=(7, 5))
     ax.semilogx(q_iq, beta_interp, "o-", color="mediumpurple", linewidth=1.5, markersize=5)
-    ax.set_xlabel(r"$q$ / Å$^{-1}$")
+    ax.set_xlabel(r"$q$ [Å$^{-1}$]")
     ax.set_ylabel(r"$\beta(q)$")
     ax.tick_params(which="both", direction="in")
     _save_or_show(fig, _stem(args.output, "beta"), r"beta(q)")
@@ -163,7 +163,7 @@ def main():
     ax.semilogx(q_iq, S_q, "o-", color="crimson", linewidth=1.5,
                 markersize=5, label=r"$S(q)$")
     ax.axhline(1.0, color="gray", linestyle="--", linewidth=0.8, label="S=1")
-    ax.set_xlabel(r"$q$ / Å$^{-1}$")
+    ax.set_xlabel(r"$q$ [Å$^{-1}$]")
     ax.set_ylabel(r"$S(q)$")
     ax.legend()
     ax.tick_params(which="both", direction="in")
@@ -182,7 +182,7 @@ def main():
         ax.semilogx(q_exp, seff_exp, "s--", color="tomato", linewidth=1.5,
                     markersize=5, label=citation)
 
-    ax.set_xlabel(r"$q$ / Å$^{-1}$")
+    ax.set_xlabel(r"$q$ [Å$^{-1}$]")
     ax.set_ylabel(r"Effective structure factor, $S_\mathrm{eff}(q)$")
     ax.legend()
     ax.tick_params(which="both", direction="in")

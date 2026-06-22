@@ -1,6 +1,12 @@
 import argparse
+import sys
+import os
 import numpy as np
 import matplotlib.pyplot as plt
+
+sys.path.insert(0, os.path.expanduser('~/projects/ppis/plot_scripts'))
+import common_presentation  # noqa: F401 — applies rcParams side-effects
+
 
 def percus_yevick_Sq(q, sigma, phi):
     """
@@ -59,15 +65,7 @@ sigma = args.sigma
 phi   = args.phi
 N     = args.N
 
-# ── Analytical PY ─────────────────────────────────────────────────────────────
-q    = np.linspace(0.01, 0.8, 500)
-S_PY = percus_yevick_Sq(q, sigma, phi)
-P_HS = hard_sphere_Pq(q, sigma)
-I_PY = P_HS * S_PY
-
 # ── Simulation (pripps, f=1 constant ff) ──────────────────────────────────────
-# pripps Debye: I(q) = Σᵢ fᵢ² + 2Σᵢ<ⱼ fᵢfⱼ sinc(q·rᵢⱼ)
-# with fᵢ=1  →  I_pripps(q) = N·S(q)  ⟹  S_sim = I_pripps / N
 has_sim = False
 if args.csv is not None:
     try:
@@ -81,39 +79,54 @@ if args.csv is not None:
     except FileNotFoundError:
         print(f"Warning: file '{args.csv}' not found — plotting analytical only.")
 
-# ── Plot ──────────────────────────────────────────────────────────────────────
-fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+# ── Analytical PY (clipped to simulation q range if available) ─────────────────
+q_max = q_sim.max() if has_sim else 0.8
+q    = np.linspace(0.01, q_max, 500)
+S_PY = percus_yevick_Sq(q, sigma, phi)
+P_HS = hard_sphere_Pq(q, sigma)
+I_PY = P_HS * S_PY
 
-axes[0].plot(q, S_PY, color='#EF9F27', lw=2.5, label='PY analytical')
+stem = f'HS_benchmark_sigma{sigma:.0f}_phi{phi:.2f}'
+
+# ── S(q) ──────────────────────────────────────────────────────────────────────
+fig, ax = plt.subplots(figsize=(7, 5))
+ax.plot(q, S_PY, color='#EF9F27', lw=2.5, label='Percus-Yevick analytical')
 if has_sim:
-    axes[0].plot(q_sim, S_sim, color='#E05252', lw=1.5, ls='--', label='Simulation')
-axes[0].axhline(1, color='gray', lw=0.8, ls=':')
-axes[0].set_xlabel('q (Å⁻¹)')
-axes[0].set_ylabel('S(q)')
-axes[0].set_title(f'Structure factor  φ={phi}  σ={sigma}Å')
-axes[0].legend()
-axes[0].grid(True)
-
-axes[1].semilogy(q, P_HS, color='#1D9E75', lw=2.5)
-axes[1].set_xlabel('q (Å⁻¹)')
-axes[1].set_ylabel('P(q)')
-axes[1].set_title('Hard sphere form factor P(q)')
-axes[1].grid(True)
-
-axes[2].semilogy(q, I_PY, color='#378ADD', lw=2.5, label='PY analytical')
-if has_sim:
-    axes[2].semilogy(q_sim, I_full_sim, color='#E05252', lw=1.5, ls='--',
-                     label='P(q)·S_sim(q)')
-axes[2].set_xlabel('q (Å⁻¹)')
-axes[2].set_ylabel('I(q)')
-axes[2].set_title('I(q) = P(q)·S(q)')
-axes[2].legend()
-axes[2].grid(True)
-
-plt.suptitle('Hard sphere Percus-Yevick benchmark', color='#EF9F27', fontsize=13)
-plt.tight_layout()
-plt.savefig(f'HS_benchmark_sigma{sigma:.0f}_phi{phi:.2f}.png', dpi=150, bbox_inches='tight')
+    ax.plot(q_sim, S_sim, color='#E05252', lw=1.5, ls='--', label='Simulation')
+ax.axhline(1, color='gray', lw=0.8, ls=':')
+ax.set_xlabel(r"$q$ [Å$^{-1}$]")
+ax.set_ylabel(r"Structure factor, $S(q)$")
+ax.legend()
+ax.tick_params(which='both', direction='in')
+ax.yaxis.set_major_locator(plt.MultipleLocator(0.5))
+ax.yaxis.set_major_formatter(plt.FormatStrFormatter('%.1f'))
+fig.savefig(f'{stem}_Sq.png', dpi=150, transparent=True, bbox_inches='tight')
 plt.show()
+plt.close(fig)
+
+# ── P(q) ──────────────────────────────────────────────────────────────────────
+fig, ax = plt.subplots(figsize=(7, 5))
+ax.semilogy(q, P_HS, color='#1D9E75', lw=2.5)
+ax.set_xlabel(r"$q$ [Å$^{-1}$]")
+ax.set_ylabel(r"Form factor, $P(q)$")
+ax.tick_params(which='both', direction='in')
+fig.savefig(f'{stem}_Pq.png', dpi=150, bbox_inches='tight')
+plt.show()
+plt.close(fig)
+
+# ── I(q) ──────────────────────────────────────────────────────────────────────
+fig, ax = plt.subplots(figsize=(7, 5))
+ax.semilogy(q, I_PY, color='#378ADD', lw=2.5, label='Percus-Yevick analytical')
+if has_sim:
+    ax.semilogy(q_sim, I_full_sim, color='#E05252', lw=1.5, ls='--',
+                label=r'$P(q)\cdot S_\mathrm{sim}(q)$')
+ax.set_xlabel(r"$q$ [Å$^{-1}$]")
+ax.set_ylabel(r"Intensity, $I(q)$")
+ax.legend()
+ax.tick_params(which='both', direction='in')
+fig.savefig(f'{stem}_Iq.png', dpi=150, bbox_inches='tight')
+plt.show()
+plt.close(fig)
 
 # ── Key features ──────────────────────────────────────────────────────────────
 q_peak = q[np.argmax(S_PY)]

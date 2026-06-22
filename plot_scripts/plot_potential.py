@@ -149,21 +149,22 @@ def plot_potentials(potential_series, plot_dir):
     fig, ax = plt.subplots()
     ax.axhline(y=0, color="black", lw=1, ls="--", alpha=0.5)
     for entry in potential_series:
+        temp = entry.get("temp")
+        leg_label = f"{temp:g}" if temp is not None else entry["label"]
         ax.plot(
             entry["R"],
             entry["U"],
-            ms=2.5,
+            ms=5,
             marker="o",
             lw=1,
-            alpha=0.5,
-            label=entry["label"],
+            alpha=0.7,
+            label=leg_label,
         )
-    ax.set_ylim(-2, 2)
-    ax.set_xlim(23, 60)
+    ax.set_ylim(-0.6, 0.2)
+    ax.set_xlim(28, 50)
     ax.set_xlabel(r"Distance, r [$\AA$]")
     ax.set_ylabel(r"Free Energy, F(r) [$k_BT$]")
-    ax.legend(ncol=1)
-    ax.set_title("Interaction Free Energy of $\gamma$B-crystallin", pad=15)
+    ax.legend(ncol=1, title="T [K]", loc="lower right")
     os.makedirs(plot_dir, exist_ok=True)
     plt.savefig(os.path.join(plot_dir, "potential.png"), dpi=EXPORT_DPI)
     plt.close(fig)
@@ -214,7 +215,7 @@ def plot_b2(b2_series, exp_data_list, plot_dir):
     ax.set_xlabel(r"Temperature, T [$K$]")
     ax.set_ylabel(r"Second virial coeff., $b_2$")
     os.makedirs(plot_dir, exist_ok=True)
-    plt.savefig(os.path.join(plot_dir, "B2.png"), dpi=EXPORT_DPI)
+    plt.savefig(os.path.join(plot_dir, "B2.png"), transparent=True, dpi=EXPORT_DPI)
     plt.close(fig)
 
 
@@ -251,7 +252,7 @@ def main():
             R, U = load_scan_columns(file_path)
             temp = extract_temperature(entry)
             label = determine_label(dataset_label, temp, scans_in_dataset, datasets_count)
-            potential_series.append({"label": label, "R": R, "U": U})
+            potential_series.append({"label": label, "R": R, "U": U, "temp": temp})
 
         json_files = sorted([name for name in os.listdir(directory) if name.endswith(".json")])
         dataset_b2 = {"label": dataset_label, "T": [], "values": []}
